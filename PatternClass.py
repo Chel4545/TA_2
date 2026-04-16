@@ -2,6 +2,8 @@ from __future__ import annotations #для типа класса внутри к
 from tokenizer import Tokenizer
 from ASTclass import AST
 from NFAclass import NFA
+from DFAclass import DFA
+from MINDFAclass import MinDFA
 
 class Pattern:
     def __init__(self, regex: str):
@@ -15,16 +17,31 @@ class Pattern:
         self.has_backreferences = False
 
     def search(self, data: str):
-        pass
+        res = None
+        if self.has_backreferences:
+            pass #использовать nfa
+        else:
+            if self.min_dfa is not None:
+                res = self.min_dfa.search(data)
+            elif self.dfa is not None:
+                res = self.dfa.search(data)
+            else:
+                pass
+
+        return True if res is not None else False
 
     def restoration(self) -> str:
         pass
 
     def subtraction(self, b: Pattern) -> Pattern:
-        pass
+        newPattern = Pattern(self.regex)
+        newPattern.dfa = self.dfa.subtraction(b.dfa)
+        return newPattern
 
-    def supplement(self, b: Pattern) -> Pattern:
-        pass
+    def complement(self) -> Pattern:
+        newPattern = Pattern(self.regex)
+        newPattern.dfa = self.dfa.complement()
+        return newPattern
 
     @classmethod
     def compile(cls, regex: str) -> Pattern:
@@ -42,5 +59,12 @@ class Pattern:
         nfa.build_nfa(pattern.ast)
         pattern.nfa = nfa
 
+        dfa = DFA()
+        dfa.build_dfa(pattern.nfa)
+        pattern.dfa = dfa
+
+        mindfa = MinDFA()
+        mindfa.build_min_dfa(pattern.dfa)
+        pattern.min_dfa = mindfa
 
         return pattern

@@ -165,3 +165,4 @@ class NFA:
         self.mark_accepting(self.accept)
 
         return result
+

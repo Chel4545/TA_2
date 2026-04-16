@@ -1,16 +1,42 @@
 from PatternClass import Pattern
-from GraphicTree import ASTGraphviz, NFAGraphviz
+from GraphicTree import ASTGraphviz, NFAGraphviz, DFAGraphviz, MinDFAGraphviz, OperationDFAGraphviz
 
 def main():
-    regex = Pattern.compile("a+")
-    #print(regex.tokens)
-    gAST = ASTGraphviz()
-    gAST.build(regex.ast)
-    gAST.dot.save("ast_tree.dot")
+#regex = Pattern.compile("ab")
+#    #print(regex.tokens)
+#    gAST = ASTGraphviz()
+#    gAST.build(regex.ast)
+#    gAST.dot.save("ast_tree.dot")
 
-    gNFA = NFAGraphviz()
-    gNFA.build(regex.nfa)
-    gNFA.dot.save("nfa_tree.dot")
+#    gNFA = NFAGraphviz()
+#    gNFA.build(regex.nfa)
+#    gNFA.dot.save("nfa_tree.dot")
+
+#   gDFA = DFAGraphviz()
+#    gDFA.build(regex.dfa)
+#    gDFA.dot.save("dfa_tree.dot")
+
+#    minDFA = MinDFAGraphviz()
+#    minDFA.build(regex.min_dfa)
+#    minDFA.dot.save("min_dfa_tree.dot")
+
+#    print(type(regex))
+
+    p = Pattern.compile("a+")
+    p_comp = p.complement()
+    g = OperationDFAGraphviz()
+    g.build(p_comp.dfa, title="Complement of a+")
+    g.dot.save("complement_a_plus.dot")
+    print(p_comp.search("aa"))
+
+
+    p1 = Pattern.compile("a")
+    p2 = Pattern.compile("b")
+    union_pattern = p1.subtraction(p2)
+
+    g_union = OperationDFAGraphviz()
+    g_union.build(union_pattern.dfa, title="Union of 'a' and 'b'")
+    g_union.dot.save("union_dfa.dot")
 
 if __name__ == '__main__':
     main()
