@@ -4,6 +4,7 @@ from ASTclass import AST
 from NFAclass import NFA
 from DFAclass import DFA
 from MINDFAclass import MinDFA
+from Restoration import GNFA
 
 class Pattern:
     def __init__(self, regex: str):
@@ -30,8 +31,11 @@ class Pattern:
 
         return True if res is not None else False
 
-    def restoration(self) -> str:
-        pass
+    def restoration(self) -> str | None:
+        if self.dfa is None:
+            return None
+        gnfa = GNFA()
+        return gnfa.build_regex(self.dfa)
 
     def subtraction(self, b: Pattern) -> Pattern:
         newPattern = Pattern(self.regex)
@@ -40,7 +44,7 @@ class Pattern:
 
     def complement(self) -> Pattern:
         newPattern = Pattern(self.regex)
-        newPattern.dfa = self.dfa.complement()
+        newPattern.dfa = self.dfa.complement(self.dfa.alphabet)
         return newPattern
 
     @classmethod

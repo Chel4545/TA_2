@@ -200,8 +200,9 @@ class DFA:
 
     # дополнение
     def complement(self, alphabet: set[str] | None = None):
+        print(alphabet)
         result = self.clone()
-        result.make_complete()
+        result.make_complete(alphabet)
 
         for state in result.states.values():
             state.is_accepting = not state.is_accepting
@@ -281,5 +282,6 @@ class DFA:
 
     def subtraction(self, other):
         alphabet = set(self.alphabet) | set(other.alphabet)
-
+        print(alphabet)
         return self.complement(alphabet).union(other).complement(alphabet)
+
