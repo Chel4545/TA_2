@@ -1,5 +1,5 @@
 from graphviz import Digraph
-from ASTclass import Literal, Epsilon, Concat, Union, Plus, Repeat, Group, BackRef
+from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Union, Plus, Repeat, Group, BackRef
 
 class ASTGraphviz:
     def __init__(self):

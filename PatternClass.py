@@ -1,9 +1,8 @@
 from __future__ import annotations #для типа класса внутри класса
-from tokenizer import Tokenizer
-from ASTclass import AST
-from NFAclass import NFA
-from DFAclass import DFA
-from MINDFAclass import MinDFA
+from pythonProject1.logic.Tokenizer import Tokenizer
+from pythonProject1.logic.ASTclass import AST
+from pythonProject1.logic.NFAclass import NFA
+from pythonProject1.logic.DFAclass import DFA
 from Restoration import GNFA
 
 class Pattern:
@@ -31,25 +30,25 @@ class Pattern:
 
         return True if res is not None else False
 
-    def restoration(self) -> str | None:
+    def to_regex(self) -> str | None:
         if self.dfa is None:
             return None
         gnfa = GNFA()
         return gnfa.build_regex(self.dfa)
 
-    def subtraction(self, b: Pattern) -> Pattern:
+    def diff(self, b: Pattern) -> Pattern:
         newPattern = Pattern(self.regex)
         newPattern.dfa = self.dfa.subtraction(b.dfa)
         return newPattern
 
-    def complement(self) -> Pattern:
+    def negate(self) -> Pattern:
         newPattern = Pattern(self.regex)
         newPattern.dfa = self.dfa.complement(self.dfa.alphabet)
         return newPattern
 
     @classmethod
     def compile(cls, regex: str) -> Pattern:
-        pattern = cls(regex)
+        pattern = cls(regex) #создание объекта класса
 
         tokenizer = Tokenizer(regex)
         pattern.tokens = tokenizer.tokens
@@ -66,9 +65,5 @@ class Pattern:
         dfa = DFA()
         dfa.build_dfa(pattern.nfa)
         pattern.dfa = dfa
-
-        mindfa = MinDFA()
-        mindfa.build_min_dfa(pattern.dfa)
-        pattern.min_dfa = mindfa
 
         return pattern

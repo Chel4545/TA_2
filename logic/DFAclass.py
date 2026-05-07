@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-
+#надо будет нфа сделать полем
 @dataclass
 class DFAEdge:
     to_state: int
@@ -10,7 +10,6 @@ class DFAEdge:
 @dataclass
 class DFAState:
     id: int
-    nfa_states: frozenset[int]
     is_accepting: bool = False
     edges: list[DFAEdge] = field(default_factory=list)
 
@@ -20,8 +19,6 @@ class DFA:
         self.start: int | None = None
         self.next_id = 0
         self.alphabet: set[str] = set()
-
-        self.subset_to_dfa_id: dict[frozenset[int], int] = {}
 
     # собираем алфавит
     def get_alphabet(self, nfa) -> set[str]:
@@ -57,17 +54,15 @@ class DFA:
         return False
 
     # создаем вершину нового графа
-    def new_state(self, nfa_states: frozenset[int], is_accepting: bool) -> int:
+    def new_state(self, is_accepting: bool) -> int:
         state_id = self.next_id
         self.next_id += 1
 
         self.states[state_id] = DFAState(
             id=state_id,
-            nfa_states=nfa_states,
             is_accepting=is_accepting
         )
 
-        self.subset_to_dfa_id[nfa_states] = state_id
         return state_id
 
     def add_edge(self, from_state: int, to_state: int, symbol: str):
@@ -85,19 +80,29 @@ class DFA:
         return result
 
     def build_dfa(self, nfa):
+        #получаем алфавит текущего регулярного выражения
         self.alphabet = self.get_alphabet(nfa)
 
+        # таблица: subset NFA -> id состояния DFA
+        subset_to_dfa_id: dict[frozenset[int], int] = {}
+
+        #готовим start
         start_subset = self.epsilon_closure(nfa, {nfa.start})
         start_is_accepting = self.is_accepting_subset(nfa, start_subset)
 
-        start_dfa_id = self.new_state(start_subset, start_is_accepting)
+        start_dfa_id = self.new_state(start_is_accepting)
         self.start = start_dfa_id
 
         unprocessed: list[frozenset[int]] = [start_subset]
 
+        subset_to_dfa_id[start_subset] = start_dfa_id
+
+        # обходим граф
         while unprocessed:
+            # достаем множество вершин NFA
             current_subset = unprocessed.pop(0)
-            current_dfa_id = self.subset_to_dfa_id[current_subset]
+            # получаем индекст вершины DFA
+            current_dfa_id = subset_to_dfa_id[current_subset]
 
             for symbol in sorted(self.alphabet):
                 moved = self.move(nfa, set(current_subset), symbol)
@@ -107,22 +112,27 @@ class DFA:
 
                 next_subset = self.epsilon_closure(nfa, moved)
 
-                if next_subset not in self.subset_to_dfa_id:
+                if next_subset not in subset_to_dfa_id:
                     next_is_accepting = self.is_accepting_subset(nfa, next_subset)
-                    self.new_state(next_subset, next_is_accepting)
+
+                    next_dfa_id = self.new_state(next_is_accepting)
+                    subset_to_dfa_id[next_subset] = next_dfa_id
+
                     unprocessed.append(next_subset)
 
-                next_dfa_id = self.subset_to_dfa_id[next_subset]
+                next_dfa_id = subset_to_dfa_id[next_subset]
                 self.add_edge(current_dfa_id, next_dfa_id, symbol)
 
         return self
 
+    # обход посимвольный(найти если есть)
     def transition(self, state_id: int, symbol: str) -> int | None:
         for edge in self.states[state_id].edges:
             if edge.symbol == symbol:
                 return edge.to_state
         return None
 
+    # сама логика поиска, сначала ищем потенциальный старт, потом проходимся внутри него
     def search(self, data: str):
         for start_pos in range(len(data) + 1):
             current_state = self.start
@@ -148,6 +158,8 @@ class DFA:
 
         return None
 
+    #операции над языками
+
     # дополнение автомата до полного
     def make_complete(self, alphabet: set[str] | None = None):
         if alphabet is None:
@@ -169,7 +181,6 @@ class DFA:
                         self.next_id += 1
                         self.states[sink_id] = DFAState(
                             id=sink_id,
-                            nfa_states=frozenset(),
                             is_accepting=False
                         )
 
@@ -185,12 +196,10 @@ class DFA:
         new_dfa.start = self.start
         new_dfa.next_id = self.next_id
         new_dfa.alphabet = set(self.alphabet)
-        new_dfa.subset_to_dfa_id = dict(self.subset_to_dfa_id)
 
         for state_id, state in self.states.items():
             new_state = DFAState(
                 id=state.id,
-                nfa_states=state.nfa_states,
                 is_accepting=state.is_accepting,
                 edges=[DFAEdge(edge.to_state, edge.symbol) for edge in state.edges]
             )
@@ -199,7 +208,7 @@ class DFA:
         return new_dfa
 
     # дополнение
-    def complement(self, alphabet: set[str] | None = None):
+    def negate(self, alphabet: set[str] | None = None):
         print(alphabet)
         result = self.clone()
         result.make_complete(alphabet)
@@ -235,7 +244,6 @@ class DFA:
         result.next_id += 1
         result.states[start_id] = DFAState(
             id=start_id,
-            nfa_states=frozenset(),
             is_accepting=start_accepting
         )
         result.start = start_id
@@ -265,7 +273,6 @@ class DFA:
                     result.next_id += 1
                     result.states[new_id] = DFAState(
                         id=new_id,
-                        nfa_states=frozenset(),
                         is_accepting=next_accepting
                     )
 
@@ -280,8 +287,158 @@ class DFA:
 
         return result
 
-    def subtraction(self, other):
+    def diff(self, other):
         alphabet = set(self.alphabet) | set(other.alphabet)
         print(alphabet)
-        return self.complement(alphabet).union(other).complement(alphabet)
+        return self.negate(alphabet).union(other).negate(alphabet)
 
+
+    #минимальный автомат
+
+    #получить одно из множеств
+    def get_states_by_accepting(self, is_accepting: bool) -> set[int]:
+        result: set[int] = set()
+
+        for state_id, state in self.states.items():
+            if state.is_accepting == is_accepting:
+                result.add(state_id)
+
+        return result
+
+    #инициализация множеств
+    def get_initial_partitions(self) -> list[set[int]]:
+        partitions: list[set[int]] = []
+
+        non_accepting = self.get_states_by_accepting(False)
+        accepting = self.get_states_by_accepting(True)
+
+        if non_accepting:
+            partitions.append(non_accepting)
+
+        if accepting:
+            partitions.append(accepting)
+
+        return partitions
+
+    # возвращаем индекс множества, в котором содержиться вершина
+    def get_partition_index(self, state_id: int, partitions: list[set[int]]) -> int:
+        for index, group in enumerate(partitions):
+            if state_id in group:
+                return index
+
+        raise ValueError(f"{state_id} не найдено")
+
+    # получаем разные множества
+    def refine_partitions(self, partitions: list[set[int]]) -> list[set[int]]:
+        new_partitions: list[set[int]] = []
+
+        #множества
+        for group in partitions:
+            buckets = {}
+
+            # вершины множества
+            for state_id in sorted(group):
+                signature: list[int | None] = []
+
+                # алфавит по вершине
+                for symbol in sorted(self.alphabet):
+                    #получаем ребро куда попали
+                    next_state = self.transition(state_id, symbol)
+
+                    if next_state is None:
+                        signature.append(None)
+                    else:
+                        #индекс множества в котором находиться данная вершина
+                        partition_index = self.get_partition_index(
+                            next_state,
+                            partitions,
+                        )
+                        signature.append(partition_index)
+
+                # (сигнатуры, куда можно попасть из данной вершины), множества
+                signature_key = tuple(signature)
+
+                # создаем множество для данного ключа, если его еще не было
+                if signature_key not in buckets:
+                    buckets[signature_key] = set()
+
+                # добавляем вершину по этому ключу
+                buckets[signature_key].add(state_id)
+
+            # добавляем только значения(множество вершин)
+            new_partitions.extend(buckets.values())
+
+        return sorted(new_partitions, key=lambda part: min(part))
+
+    # получаем номер множества и символ по которому можно перейти из текущего
+    def get_partition_transitions(self, group: set[int], partitions: list[set[int]]) -> dict[str, int]:
+        if not group:
+            raise ValueError("Пустое множество состояний")
+
+        representative = min(group)
+
+        transit: dict[str, int] = {}
+
+        for symbol in sorted(self.alphabet):
+            next_state = self.transition(representative, symbol)
+
+            if next_state is None:
+                continue
+
+            target_partition_index = self.get_partition_index(
+                next_state,
+                partitions,
+            )
+
+            transit[symbol] = target_partition_index
+
+        return transit
+
+    #общий метод минимизации
+    def build_min_dfa(self):
+        if self.start is None:
+            raise ValueError("DFA не имеет стартового состояния")
+
+        # начальное разбиение
+        partitions = self.get_initial_partitions()
+
+        # разбиваем пока не будут меняться множества
+        while True:
+            new_partitions = self.refine_partitions(partitions)
+
+            if {frozenset(group) for group in partitions} == {frozenset(group) for group in new_partitions}:
+                break
+
+            partitions = new_partitions
+
+        # cоздаём новый минимальный DFA
+        min_dfa = DFA()
+        min_dfa.alphabet = set(self.alphabet)
+
+        # устанавливаем принимающие состояния
+        for group in partitions:
+            is_accepting = any(self.states[state_id].is_accepting for state_id in group)
+
+            min_dfa.new_state(is_accepting)
+
+        # установка стартовой вершины
+        min_dfa.start = self.get_partition_index(
+            self.start,
+            partitions,
+        )
+
+        # восстанавливаем рёбра между новыми вершинами
+        for group_index, group in enumerate(partitions):
+            transitions = self.get_partition_transitions(
+                group,
+                partitions,
+            )
+
+            for symbol, target_group_index in transitions.items():
+                min_dfa.add_edge(
+                    from_state=group_index,
+                    to_state=target_group_index,
+                    symbol=symbol,
+                )
+
+        return min_dfa

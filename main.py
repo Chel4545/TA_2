@@ -2,6 +2,7 @@ from PatternClass import Pattern
 from GraphicTree import ASTGraphviz, NFAGraphviz, DFAGraphviz, MinDFAGraphviz, OperationDFAGraphviz
 
 def main():
+    pass
 #    regex = Pattern.compile("ab")
 #    #print(regex.tokens)
 #    gAST = ASTGraphviz()
@@ -39,8 +40,8 @@ def main():
 #    g_union.build(union_pattern.dfa, title="Union of 'a' and 'b'")
 #    g_union.dot.save("union_dfa.dot")
 
-    p = Pattern.compile("ab")
-    print(p.restoration())
+#    p = Pattern.compile("ab")
+#    print(p.restoration())
 
 if __name__ == '__main__':
     main()

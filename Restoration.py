@@ -35,12 +35,14 @@ class GNFA:
         self.accept = None
         self.next_id = 0
 
-        dfa_to_gnfa: dict[int, int] = {}
+        dfa_to_gnfa: dict[int, int] = {} #словарь соответствий
 
+        #создаем состояния
         for dfa_state_id in sorted(dfa.states.keys()):
             gnfa_state_id = self.new_state()
             dfa_to_gnfa[dfa_state_id] = gnfa_state_id
 
+        # само копирование
         for dfa_state_id, dfa_state in dfa.states.items():
             from_gnfa = dfa_to_gnfa[dfa_state_id]
 

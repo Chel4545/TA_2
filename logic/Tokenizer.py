@@ -1,9 +1,44 @@
 from dataclasses import dataclass
-from typing import Any
+from enum import StrEnum
+
+
+class TokenType(StrEnum):
+    LITERAL = "LITERAL"
+    OR = "OR"
+    CONCAT = "CONCAT"
+    PLUS = "PLUS"
+    RANGE = "RANGE"
+    EPSILON = "EPSILON"
+    LPAREN = "LPAREN"
+    RPAREN = "RPAREN"
+    GROUP_START = "GROUP_START"
+    BACKREF = "BACKREF"
+    EOF = "EOF"
+
+    @property #убрать скобки
+    def is_atom_end(self) -> bool:
+        return self in {
+            TokenType.LITERAL,
+            TokenType.BACKREF,
+            TokenType.EPSILON,
+            TokenType.RPAREN,
+            TokenType.PLUS,
+            TokenType.RANGE,
+        }
+
+    @property
+    def is_atom_start(self) -> bool:
+        return self in {
+            TokenType.LITERAL,
+            TokenType.BACKREF,
+            TokenType.EPSILON,
+            TokenType.LPAREN,
+            TokenType.GROUP_START,
+        }
 
 @dataclass
 class Token:
-    type: str
+    type: TokenType
     value: any = None
 
 class Tokenizer:
@@ -42,7 +77,7 @@ class Tokenizer:
                 self.advance()
                 if self.current() is None:
                     raise ValueError("После '#' нет символа")
-                tokens.append(Token('LITERAL', self.current()))
+                tokens.append(Token(TokenType.LITERAL, self.current()))
                 self.advance()
                 continue
 
@@ -50,7 +85,7 @@ class Tokenizer:
             if c == '\\':
                 self.advance()
                 num = self.read_number()
-                tokens.append(Token('BACKREF', num))
+                tokens.append(Token(TokenType.BACKREF, num))
                 continue
 
             # встретили (
@@ -63,18 +98,18 @@ class Tokenizer:
                     num = self.read_number()
                     if self.current() == ':':
                         self.advance()
-                        tokens.append(Token('GROUP_START', num))
+                        tokens.append(Token(TokenType.GROUP_START, num))
                         continue
 
                 # обычная группа
                 self.pos = saved_pos
-                tokens.append(Token('LPAREN'))
+                tokens.append(Token(TokenType.LPAREN))
                 self.advance()
                 continue
 
             # заверщающая скобка ')'
             if c == ')':
-                tokens.append(Token('RPAREN'))
+                tokens.append(Token(TokenType.RPAREN))
                 self.advance()
                 continue
 
@@ -95,34 +130,34 @@ class Tokenizer:
                     raise ValueError(f"Ожидалась '}}' в диапазоне на позиции {self.pos}")
                 self.advance()
 
-                tokens.append(Token('RANGE', (x, y)))
+                tokens.append(Token(TokenType.RANGE, (x, y)))
                 continue
 
 
             # Операторы
             if c == '|':
-                tokens.append(Token('OR'))
+                tokens.append(Token(TokenType.OR))
                 self.advance()
                 continue
 
             if c == '+':
-                tokens.append(Token('PLUS'))
+                tokens.append(Token(TokenType.PLUS))
                 self.advance()
                 continue
 
             if c == '.':
-                tokens.append(Token('CONCAT'))
+                tokens.append(Token(TokenType.CONCAT))
                 self.advance()
                 continue
 
             if c == '^':
-                tokens.append(Token('EPSILON'))
+                tokens.append(Token(TokenType.EPSILON))
                 self.advance()
                 continue
 
             # Обычный символ
-            tokens.append(Token('LITERAL', c))
+            tokens.append(Token(TokenType.LITERAL, c))
             self.advance()
 
-        tokens.append(Token('EOF'))
+        tokens.append(Token(TokenType.EOF))
         return tokens

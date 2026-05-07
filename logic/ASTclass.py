@@ -1,18 +1,22 @@
 from dataclasses import dataclass
-from tokenizer import Token
+from pythonProject1.logic.Tokenizer import Token, TokenType
+
 
 class Node:
     pass
 
+
 # r
 @dataclass
-class Literal(Node): #alpha
+class Literal(Node):  # alpha
     char: str
+
 
 # ^
 @dataclass
 class Epsilon(Node):
     pass
+
 
 # .
 @dataclass
@@ -20,29 +24,34 @@ class Concat(Node):
     left: Node
     right: Node
 
+
 # |
 @dataclass
-class Union(Node):
+class Or(Node):
     left: Node
     right: Node
+
 
 # +
 @dataclass
 class Plus(Node):
     expr: Node
 
-# {х, y}
+
+# {x, y}
 @dataclass
 class Repeat(Node):
     expr: Node
     min: int
     max: int | None
 
-# (n:)
+
+# (n:r)
 @dataclass
-class Group(Node): # (n:r)
+class Group(Node):
     num: int
     expr: Node
+
 
 # \n
 @dataclass
@@ -52,47 +61,37 @@ class BackRef(Node):
 
 class AST:
     def __init__(self):
-        pass
+        pass # мб сюда добавить вершину
 
-    def is_atom_end(self, token: Token) -> bool:
-        return token.type in {
-            'LITERAL', 'BACKREF', 'EPSILON', 'RPAREN', 'PLUS', 'RANGE'
-        }
-
-    def is_atom_start(self, token: Token) -> bool:
-        return token.type in {
-            'LITERAL', 'BACKREF', 'EPSILON', 'LPAREN', 'GROUP_START'
-        }
-
+    # Добавить операцию конкатенации между стыками
     def insert_concat_tokens(self, tokens: list[Token]) -> list[Token]:
         result: list[Token] = []
 
-        filtered = [t for t in tokens if t.type != 'EOF']
-
-        for i, token in enumerate(filtered):
+        for i, token in enumerate(tokens):
             result.append(token)
 
-            if i + 1 < len(filtered):
-                nxt = filtered[i + 1]
-                if self.is_atom_end(token) and self.is_atom_start(nxt):
-                    result.append(Token('CONCAT'))
+            if i + 1 < len(tokens):
+                next_token = tokens[i + 1]
 
-        result.append(Token('EOF'))
+                if token.type.is_atom_end and next_token.type.is_atom_start:
+                    result.append(Token(TokenType.CONCAT))
+
         return result
 
-
     def apply_op(self, op: Token, nodes: list[Node]) -> None:
-        if op.type == 'OR':
+        if op.type == TokenType.OR:
             if len(nodes) < 2:
                 raise ValueError("Недостаточно операндов для оператора '|'")
+
             right = nodes.pop()
             left = nodes.pop()
-            nodes.append(Union(left, right))
+            nodes.append(Or(left, right))
             return
 
-        if op.type == 'CONCAT':
+        if op.type == TokenType.CONCAT:
             if len(nodes) < 2:
                 raise ValueError("Недостаточно операндов для конкатенации")
+
             right = nodes.pop()
             left = nodes.pop()
             nodes.append(Concat(left, right))
@@ -106,11 +105,11 @@ class AST:
 
         expr = nodes.pop()
 
-        if token.type == 'PLUS':
+        if token.type == TokenType.PLUS:
             nodes.append(Plus(expr))
             return
 
-        if token.type == 'RANGE':
+        if token.type == TokenType.RANGE:
             x, y = token.value
             nodes.append(Repeat(expr, x, y))
             return
@@ -118,10 +117,12 @@ class AST:
         raise ValueError(f"Неизвестный постфиксный оператор: {token.type}")
 
     def precedence(self, token: Token) -> int:
-        if token.type == 'OR':
+        if token.type == TokenType.OR:
             return 1
-        if token.type == 'CONCAT':
+
+        if token.type == TokenType.CONCAT:
             return 2
+
         return 0
 
     def parse(self, tokens: list[Token]) -> Node:
@@ -131,37 +132,41 @@ class AST:
         ops: list[Token] = []
 
         i = 0
-        while i < len(tokens):
-            token = tokens[i]
 
-            if token.type == 'LITERAL':
+        for token in tokens:
+            if token.type == TokenType.EOF:
+                break
+
+            if token.type == TokenType.LITERAL:
                 nodes.append(Literal(token.value))
 
-            elif token.type == 'EPSILON':
+            elif token.type == TokenType.EPSILON:
                 nodes.append(Epsilon())
 
-            elif token.type == 'BACKREF':
+            elif token.type == TokenType.BACKREF:
                 nodes.append(BackRef(token.value))
 
-            elif token.type in {'PLUS', 'RANGE'}:
+            elif token.type in {TokenType.PLUS, TokenType.RANGE}:
                 self.apply_postfix(token, nodes)
 
-            elif token.type == 'LPAREN':
+            elif token.type == TokenType.LPAREN:
                 ops.append(token)
 
-            elif token.type == 'GROUP_START':
+            elif token.type == TokenType.GROUP_START:
                 ops.append(token)
 
-            elif token.type in {'OR', 'CONCAT'}:
+            elif token.type in {TokenType.OR, TokenType.CONCAT}:
                 while (
-                    ops and ops[-1].type not in {'LPAREN', 'GROUP_START'}
-                        and self.precedence(ops[-1]) >= self.precedence(token)
+                    ops
+                    and ops[-1].type not in {TokenType.LPAREN, TokenType.GROUP_START}
+                    and self.precedence(ops[-1]) >= self.precedence(token)
                 ):
                     self.apply_op(ops.pop(), nodes)
+
                 ops.append(token)
 
-            elif token.type == 'RPAREN':
-                while ops and ops[-1].type not in {'LPAREN', 'GROUP_START'}:
+            elif token.type == TokenType.RPAREN:
+                while ops and ops[-1].type not in {TokenType.LPAREN, TokenType.GROUP_START}:
                     self.apply_op(ops.pop(), nodes)
 
                 if not ops:
@@ -169,14 +174,12 @@ class AST:
 
                 open_token = ops.pop()
 
-                if open_token.type == 'GROUP_START':
+                if open_token.type == TokenType.GROUP_START:
                     if not nodes:
                         raise ValueError("Пустая группа захвата")
+
                     expr = nodes.pop()
                     nodes.append(Group(open_token.value, expr))
-
-            elif token.type == 'EOF':
-                break
 
             else:
                 raise ValueError(f"Неизвестный токен: {token.type}")
@@ -184,8 +187,9 @@ class AST:
             i += 1
 
         while ops:
-            if ops[-1].type in {'LPAREN', 'GROUP_START'}:
+            if ops[-1].type in {TokenType.LPAREN, TokenType.GROUP_START}:
                 raise ValueError("Незакрытая скобка")
+
             self.apply_op(ops.pop(), nodes)
 
         if len(nodes) != 1:
@@ -195,14 +199,14 @@ class AST:
 
     def analyze_capture_groups(self, tokens: list[Token]) -> bool:
         for token in tokens:
-            if token.type == 'GROUP_START':
+            if token.type == TokenType.GROUP_START:
                 return True
 
         return False
 
     def analyze_backreferences(self, tokens: list[Token]) -> bool:
         for token in tokens:
-            if token.type == 'BACKREF':
+            if token.type == TokenType.BACKREF:
                 return True
 
         return False
