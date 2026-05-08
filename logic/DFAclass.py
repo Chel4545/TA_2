@@ -6,7 +6,7 @@ class DFAEdge:
     to_state: int
     symbol: str
 
-
+#зачем хранить несколько id
 @dataclass
 class DFAState:
     id: int
@@ -162,6 +162,7 @@ class DFA:
 
     # дополнение автомата до полного
     def make_complete(self, alphabet: set[str] | None = None):
+        # дополняем до разных алфавитов
         if alphabet is None:
             alphabet = set(self.alphabet)
         else:
@@ -171,23 +172,22 @@ class DFA:
 
         sink_id = None
 
+        #проходимся по всем элементам графа
         for state_id in list(self.states.keys()):
+            #получаем литералы по которым есть переходы
             existing_symbols = {edge.symbol for edge in self.states[state_id].edges}
 
-            for symbol in alphabet:
+            for symbol in sorted(alphabet):
                 if symbol not in existing_symbols:
+                    # создаем одн раз вершину
                     if sink_id is None:
-                        sink_id = self.next_id
-                        self.next_id += 1
-                        self.states[sink_id] = DFAState(
-                            id=sink_id,
-                            is_accepting=False
-                        )
+                        sink_id = self.new_state(False)
 
                     self.add_edge(state_id, sink_id, symbol)
 
+        # замыкаем на самой  себе по всем символам
         if sink_id is not None:
-            for symbol in alphabet:
+            for symbol in sorted(alphabet):
                 self.add_edge(sink_id, sink_id, symbol)
 
     # клонируем
@@ -207,9 +207,8 @@ class DFA:
 
         return new_dfa
 
-    # дополнение
+    # дополнение(инверсия принимающих состояний)
     def negate(self, alphabet: set[str] | None = None):
-        print(alphabet)
         result = self.clone()
         result.make_complete(alphabet)
 
@@ -220,19 +219,24 @@ class DFA:
 
     # объединение языков
     def union(self, other):
+        # создаем новые автоматы
         dfa1 = self.clone()
         dfa2 = other.clone()
 
+        # получаем общий алфавит
         alphabet = set(dfa1.alphabet) | set(dfa2.alphabet)
 
+        # дополняем оба
         dfa1.make_complete(alphabet)
         dfa2.make_complete(alphabet)
 
+        # автомат результата
         result = DFA()
         result.alphabet = set(alphabet)
 
         pair_to_id = {}
 
+        #готовим стартовую пару
         start_pair = (dfa1.start, dfa2.start)
         start_accepting = (
                 dfa1.states[dfa1.start].is_accepting
@@ -240,28 +244,26 @@ class DFA:
                 dfa2.states[dfa2.start].is_accepting
         )
 
-        start_id = result.next_id
-        result.next_id += 1
-        result.states[start_id] = DFAState(
-            id=start_id,
-            is_accepting=start_accepting
-        )
+        start_id = result.new_state(start_accepting)
         result.start = start_id
         pair_to_id[start_pair] = start_id
 
         unprocessed = [start_pair]
 
         while unprocessed:
+            # получаем пару
             current_pair = unprocessed.pop(0)
             q1, q2 = current_pair
             current_result_id = pair_to_id[current_pair]
 
+            # получаем пару вершин в которые можно перейти по текущему символу
             for symbol in sorted(alphabet):
                 next_q1 = dfa1.transition(q1, symbol)
                 next_q2 = dfa2.transition(q2, symbol)
 
                 next_pair = (next_q1, next_q2)
 
+                # создаем пару если ее не было
                 if next_pair not in pair_to_id:
                     next_accepting = (
                             dfa1.states[next_q1].is_accepting
@@ -269,16 +271,11 @@ class DFA:
                             dfa2.states[next_q2].is_accepting
                     )
 
-                    new_id = result.next_id
-                    result.next_id += 1
-                    result.states[new_id] = DFAState(
-                        id=new_id,
-                        is_accepting=next_accepting
-                    )
-
+                    new_id = result.new_state(next_accepting)
                     pair_to_id[next_pair] = new_id
                     unprocessed.append(next_pair)
 
+                # создаем ребро
                 result.add_edge(
                     current_result_id,
                     pair_to_id[next_pair],
@@ -289,7 +286,6 @@ class DFA:
 
     def diff(self, other):
         alphabet = set(self.alphabet) | set(other.alphabet)
-        print(alphabet)
         return self.negate(alphabet).union(other).negate(alphabet)
 
 
