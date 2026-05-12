@@ -1,9 +1,10 @@
 from __future__ import annotations #для типа класса внутри класса
+
 from pythonProject1.logic.Tokenizer import Tokenizer
 from pythonProject1.logic.ASTclass import AST
 from pythonProject1.logic.NFAclass import NFA
 from pythonProject1.logic.DFAclass import DFA
-from Restoration import GNFA
+from pythonProject1.logic.RegexRestorer import GNFA
 
 class Pattern:
     def __init__(self, regex: str):
@@ -16,35 +17,60 @@ class Pattern:
         self.has_capture_groups = False
         self.has_backreferences = False
 
+
     def search(self, data: str):
-        res = None
         if self.has_backreferences:
             pass #использовать nfa
-        else:
-            if self.min_dfa is not None:
-                res = self.min_dfa.search(data)
-            elif self.dfa is not None:
-                res = self.dfa.search(data)
-            else:
-                pass
 
-        return True if res is not None else False
+        dfa = self.min_dfa or self.dfa
+
+        if dfa is None:
+            return None
+
+        return dfa.search(data) is not None
+
+    def accepts(self, data: str):
+        if self.has_backreferences:
+            pass #использовать nfa
+
+        dfa = self.min_dfa or self.dfa
+
+        if dfa is None:
+            return None
+
+        return dfa.accepts(data)
 
     def to_regex(self) -> str | None:
-        if self.dfa is None:
+        dfa = self.min_dfa or self.dfa
+
+        if dfa is None:
             return None
+
         gnfa = GNFA()
-        return gnfa.build_regex(self.dfa)
+        return gnfa.build_regex(dfa)
 
     def diff(self, b: Pattern) -> Pattern:
-        newPattern = Pattern(self.regex)
-        newPattern.dfa = self.dfa.subtraction(b.dfa)
-        return newPattern
+        dfa_a = self.min_dfa or self.dfa
+        dfa_b = b.min_dfa or b.dfa
+
+        if dfa_a is None or dfa_b is None:
+            raise ValueError("Оба Pattern должны быть скомпилированы")
+
+        new_pattern = Pattern("")
+        new_pattern.dfa = dfa_a.diff(dfa_b)
+        return new_pattern
 
     def negate(self) -> Pattern:
-        newPattern = Pattern(self.regex)
-        newPattern.dfa = self.dfa.complement(self.dfa.alphabet)
-        return newPattern
+        dfa = self.min_dfa or self.dfa
+
+        if dfa is None:
+            raise ValueError("Pattern должен быть скомпилирован")
+
+        new_pattern = Pattern("")
+        new_pattern.dfa = dfa.negate(dfa.alphabet)
+        new_pattern.min_dfa = new_pattern.dfa.build_min_dfa()
+
+        return new_pattern
 
     @classmethod
     def compile(cls, regex: str) -> Pattern:
@@ -53,10 +79,10 @@ class Pattern:
         tokenizer = Tokenizer(regex)
         pattern.tokens = tokenizer.tokens
 
-        ASTmaker = AST()
-        pattern.ast = ASTmaker.parse(pattern.tokens)
-        pattern.has_capture_groups = ASTmaker.analyze_capture_groups(pattern.tokens)
-        pattern.has_backreferences = ASTmaker.analyze_backreferences(pattern.tokens)
+        ast_maker  = AST()
+        pattern.ast = ast_maker .parse(pattern.tokens)
+        pattern.has_capture_groups = ast_maker .analyze_capture_groups(pattern.tokens)
+        pattern.has_backreferences = ast_maker .analyze_backreferences(pattern.tokens)
 
         nfa = NFA()
         nfa.build_nfa(pattern.ast)
@@ -65,5 +91,7 @@ class Pattern:
         dfa = DFA()
         dfa.build_dfa(pattern.nfa)
         pattern.dfa = dfa
+
+        pattern.min_dfa = dfa.build_min_dfa()
 
         return pattern

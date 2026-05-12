@@ -158,6 +158,22 @@ class DFA:
 
         return None
 
+    def accepts(self, data: str) -> bool:
+        current_state = self.start
+
+        if current_state is None:
+            return False
+
+        for symbol in data:
+            next_state = self.transition(current_state, symbol)
+
+            if next_state is None:
+                return False
+
+            current_state = next_state
+
+        return self.states[current_state].is_accepting
+
     #операции над языками
 
     # дополнение автомата до полного
