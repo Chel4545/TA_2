@@ -5,6 +5,7 @@ from pythonProject1.logic.ASTclass import AST
 from pythonProject1.logic.NFAclass import NFA
 from pythonProject1.logic.DFAclass import DFA
 from pythonProject1.logic.RegexRestorer import GNFA
+from pythonProject1.logic.MatchResult import MatchResult
 
 class Pattern:
     def __init__(self, regex: str):
@@ -22,12 +23,25 @@ class Pattern:
         if self.has_backreferences:
             pass #использовать nfa
 
+        if self.has_capture_groups:
+            return self.nfa.search_with_groups(data)
+
         dfa = self.min_dfa or self.dfa
 
         if dfa is None:
             return None
 
-        return dfa.search(data) is not None
+        result = dfa.search(data)
+
+        if result is None:
+            return None
+
+        start, end, value = result
+        return MatchResult(
+            start=start,
+            end=end,
+            value=value,
+        )
 
     def accepts(self, data: str):
         if self.has_backreferences:
@@ -80,9 +94,9 @@ class Pattern:
         pattern.tokens = tokenizer.tokens
 
         ast_maker  = AST()
-        pattern.ast = ast_maker .parse(pattern.tokens)
-        pattern.has_capture_groups = ast_maker .analyze_capture_groups(pattern.tokens)
-        pattern.has_backreferences = ast_maker .analyze_backreferences(pattern.tokens)
+        pattern.ast = ast_maker.parse(pattern.tokens)
+        pattern.has_capture_groups = ast_maker.analyze_capture_groups(pattern.tokens)
+        pattern.has_backreferences = ast_maker.analyze_backreferences(pattern.tokens)
 
         nfa = NFA()
         nfa.build_nfa(pattern.ast)

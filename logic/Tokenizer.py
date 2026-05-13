@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
 
 class TokenType(StrEnum):
@@ -39,7 +40,7 @@ class TokenType(StrEnum):
 @dataclass
 class Token:
     type: TokenType
-    value: any = None
+    value: Any = None
 
 class Tokenizer:
 

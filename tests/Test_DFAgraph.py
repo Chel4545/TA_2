@@ -7,18 +7,8 @@ from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
 def test_new_state():
     dfa = DFA()
 
-    subset_1 = frozenset({0, 1, 2})
-    subset_2 = frozenset({3, 4})
-
-    state_1 = dfa.new_state(
-        nfa_states=subset_1,
-        is_accepting=False,
-    )
-
-    state_2 = dfa.new_state(
-        nfa_states=subset_2,
-        is_accepting=True,
-    )
+    state_1 = dfa.new_state(is_accepting=False)
+    state_2 = dfa.new_state(is_accepting=True)
 
     assert state_1 == 0
     assert state_2 == 1
@@ -26,36 +16,23 @@ def test_new_state():
 
     assert dfa.states[0] == DFAState(
         id=0,
-        nfa_states=frozenset({0, 1, 2}),
         is_accepting=False,
     )
 
     assert dfa.states[1] == DFAState(
         id=1,
-        nfa_states=frozenset({3, 4}),
         is_accepting=True,
     )
 
-    assert dfa.subset_to_dfa_id[frozenset({0, 1, 2})] == 0
-    assert dfa.subset_to_dfa_id[frozenset({3, 4})] == 1
+    assert dfa.states[0].edges == []
+    assert dfa.states[1].edges == []
 
 def test_add_edge():
     dfa = DFA()
 
-    state_0 = dfa.new_state(
-        nfa_states=frozenset({0}),
-        is_accepting=False,
-    )
-
-    state_1 = dfa.new_state(
-        nfa_states=frozenset({1}),
-        is_accepting=True,
-    )
-
-    state_2 = dfa.new_state(
-        nfa_states=frozenset({2}),
-        is_accepting=False,
-    )
+    state_0 = dfa.new_state(is_accepting=False)
+    state_1 = dfa.new_state(is_accepting=True)
+    state_2 = dfa.new_state(is_accepting=False)
 
     dfa.add_edge(state_0, state_1, "a")
     dfa.add_edge(state_0, state_2, "b")

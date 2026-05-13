@@ -523,6 +523,20 @@ CASES = {
         ),
         None,
     ),
+    "(1:b+) -> Group(1, Plus(b))": (
+        [
+            Token(TokenType.GROUP_START, 1),
+            Token(TokenType.LITERAL, "b"),
+            Token(TokenType.PLUS),
+            Token(TokenType.RPAREN),
+            Token(TokenType.EOF),
+        ],
+        Group(
+            num=1,
+            expr=Plus(Literal("b")),
+        ),
+        None,
+    ),
     "empty -> ValueError": (
         [
             Token(TokenType.EOF),

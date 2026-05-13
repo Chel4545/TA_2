@@ -1,12 +1,14 @@
 from dataclasses import dataclass, field
 from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef
+from pythonProject1.logic.MatchResult import MatchResult
 from collections import deque
 
 @dataclass
 class Edge:
     to_state: int
     symbol: str | None = None
-
+    group_start: int | None = None
+    group_end: int | None = None
 
 @dataclass
 class State:
@@ -34,8 +36,21 @@ class NFA:
         self.states[state_id] = State(state_id)
         return state_id
 
-    def add_edge(self, from_state: int, to_state: int, symbol: str | None = None):
-        self.states[from_state].edges.append(Edge(to_state, symbol))
+    def add_edge(
+            self,
+            from_state: int,
+            to_state: int,
+            symbol: str | None = None,
+            group_start: int | None = None,
+            group_end: int | None = None):
+        self.states[from_state].edges.append(
+            Edge(
+                to_state=to_state,
+                symbol=symbol,
+                group_start=group_start,
+                group_end=group_end,
+            )
+        )
 
     def mark_accepting(self, state_id: int):
         self.states[state_id].is_accepting = True
@@ -147,6 +162,8 @@ class NFA:
                     from_state=new_from,
                     to_state=new_to,
                     symbol=edge.symbol,
+                    group_start=edge.group_start,
+                    group_end=edge.group_end,
                 )
 
                 if old_to not in visited:
@@ -212,6 +229,27 @@ class NFA:
             diff=diff,
         )
 
+    # (n:r)
+    def apply_group(self, inner: Fragment, group_num: int) -> Fragment:
+        s = self.new_state()
+        f = self.new_state()
+
+        self.add_edge(
+            from_state=s,
+            to_state=inner.start,
+            symbol=None,
+            group_start=group_num,
+        )
+
+        self.add_edge(
+            from_state=inner.accept,
+            to_state=f,
+            symbol=None,
+            group_end=group_num,
+        )
+
+        return Fragment(s, f)
+
     #создание графа
     def build_nfa(self, ast_root) -> Fragment:
         def visit(node) -> Fragment:
@@ -239,8 +277,8 @@ class NFA:
                 return self.apply_plus(inner)
 
             if isinstance(node, Group):
-                # Группа захвата пока не меняет НКА
-                return visit(node.expr)
+                inner = visit(node.expr)
+                return self.apply_group(inner, node.num)
 
             if isinstance(node, BackRef):
                 raise ValueError("BackRef нельзя компилировать в NFA")
@@ -259,3 +297,14 @@ class NFA:
 
         return result
 
+
+    # поиск(если есть группа захвата)
+
+    def transition(self, state_id: int, symbol: str | None) -> list[Edge]:
+        result: list[Edge] = []
+
+        for edge in self.states[state_id].edges:
+            if edge.symbol == symbol:
+                result.append(edge)
+
+        return result

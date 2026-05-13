@@ -52,8 +52,8 @@ def test_regex_star():
 
     assert gnfa.regex_star("inf") == "ε"
     assert gnfa.regex_star("ε") == "ε"
-    assert gnfa.regex_star("a") == "a{0,}"
-    assert gnfa.regex_star("a|b") == "(a|b){0,}"
+    assert gnfa.regex_star("a") == "a*"
+    assert gnfa.regex_star("a|b") == "a|b*"
 
 def test_build_matrix():
     dfa = DFA()

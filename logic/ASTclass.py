@@ -128,10 +128,9 @@ class AST:
     def parse(self, tokens: list[Token]) -> Node:
         tokens = self.insert_concat_tokens(tokens)
 
-        nodes: list[Node] = []
-        ops: list[Token] = []
-
-        i = 0
+        nodes: list[Node]  = []
+        ops:   list[Token] = []
+        group_node_positions: list[int]   = []
 
         for token in tokens:
             if token.type == TokenType.EOF:
@@ -154,6 +153,7 @@ class AST:
 
             elif token.type == TokenType.GROUP_START:
                 ops.append(token)
+                group_node_positions.append(len(nodes))
 
             elif token.type in {TokenType.OR, TokenType.CONCAT}:
                 while (
@@ -175,16 +175,23 @@ class AST:
                 open_token = ops.pop()
 
                 if open_token.type == TokenType.GROUP_START:
-                    if not nodes:
+                    if not group_node_positions:
+                        raise ValueError("Ошибка стека групп захвата")
+
+                    start_pos = group_node_positions.pop()
+
+                    if len(nodes) <= start_pos:
                         raise ValueError("Пустая группа захвата")
 
                     expr = nodes.pop()
+
+                    if len(nodes) != start_pos:
+                        raise ValueError("Некорректная группа захвата")
+
                     nodes.append(Group(open_token.value, expr))
 
             else:
                 raise ValueError(f"Неизвестный токен: {token.type}")
-
-            i += 1
 
         while ops:
             if ops[-1].type in {TokenType.LPAREN, TokenType.GROUP_START}:

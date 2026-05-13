@@ -40,33 +40,45 @@ def test_compile(regex, has_capture_groups, has_backreferences):
     assert pattern.has_backreferences is has_backreferences
 
 @pytest.mark.parametrize(
-    "regex, data, expected_bool, expected_dfa_result",
+    "regex, data, expected_result",
     [
-        ("a", "xxay", True, (2, 3, "a")),
-        ("a", "bbb", False, None),
+        ("a", "xxay", (2, 3, "a")),
+        ("a", "bbb", None),
 
-        ("a+", "xxaaab", True, (2, 5, "aaa")),
-        ("a+", "bbb", False, None),
+        ("a+", "xxaaab", (2, 5, "aaa")),
+        ("a+", "bbb", None),
 
-        ("ab", "xxabyy", True, (2, 4, "ab")),
-        ("ab", "acb", False, None),
+        ("ab", "xxabyy", (2, 4, "ab")),
+        ("ab", "acb", None),
 
-        ("a|b", "xxb", True, (2, 3, "b")),
-        ("a|b", "ccc", False, None),
+        ("a|b", "xxb", (2, 3, "b")),
+        ("a|b", "ccc", None),
 
-        ("a{2,4}", "xaaaay", True, (1, 5, "aaaa")),
-        ("a{2,4}", "xay", False, None),
+        ("a{2,4}", "xaaaay", (1, 5, "aaaa")),
+        ("a{2,4}", "xay", None),
 
-        ("^", "abc", True, (0, 0, "")),
+        ("^", "abc", (0, 0, "")),
     ],
 )
-def test_search(regex, data, expected_bool, expected_dfa_result):
+def test_search(regex, data, expected_result):
     pattern = Pattern.compile(regex)
 
-    dfa = pattern.min_dfa or pattern.dfa
+    result = pattern.search(data)
 
-    assert pattern.search(data) is expected_bool
-    assert dfa.search(data) == expected_dfa_result
+    if expected_result is None:
+        assert result is None
+        return
+
+    expected_start, expected_end, expected_value = expected_result
+
+    assert result is not None
+    assert result.start == expected_start
+    assert result.end == expected_end
+    assert result.value == expected_value
+
+    assert result.group(0) == expected_value
+    assert result[0] == expected_value
+    assert result.group(1) is None
 
 @pytest.mark.parametrize(
     "regex, data, expected_bool",

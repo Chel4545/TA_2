@@ -546,6 +546,32 @@ def test_apply_repeat():
 
     assert nfa.states[5].edges == []
 
+def test_apply_group():
+    nfa = NFA()
+
+    inner = nfa.build_literal(Literal("a"))
+
+    result = nfa.apply_group(
+        inner=inner,
+        group_num=1,
+    )
+
+    assert result == Fragment(start=2, accept=3)
+
+    assert nfa.states[0].edges == [
+        Edge(to_state=1, symbol="a")
+    ]
+
+    assert nfa.states[2].edges == [
+        Edge(to_state=0, symbol=None, group_start=1)
+    ]
+
+    assert nfa.states[1].edges == [
+        Edge(to_state=3, symbol=None, group_end=1)
+    ]
+
+    assert nfa.states[3].edges == []
+
 CASES = {
     "None -> ValueError": (
         None,
@@ -643,6 +669,20 @@ CASES = {
                 Edge(to_state=5, symbol=None),
             ]),
             (5, []),
+        ],
+        None,
+    ),
+    "(1:a) -> NFA for capture group": (
+        Group(
+            num=1,
+            expr=Literal("a"),
+        ),
+        Fragment(start=2, accept=3),
+        [
+            (0, [Edge(to_state=1, symbol="a")]),
+            (1, [Edge(to_state=3, symbol=None, group_end=1)]),
+            (2, [Edge(to_state=0, symbol=None, group_start=1)]),
+            (3, []),
         ],
         None,
     ),
