@@ -40,27 +40,41 @@ def test_compile(regex, has_capture_groups, has_backreferences):
     assert pattern.has_backreferences is has_backreferences
 
 @pytest.mark.parametrize(
-    "regex, data, expected_result",
+    "regex, data, expected_result, expected_groups",
     [
-        ("a", "xxay", (2, 3, "a")),
-        ("a", "bbb", None),
+        # без групп
+        ("a", "xxay", (2, 3, "a"), {}),
+        ("a", "bbb", None, {}),
 
-        ("a+", "xxaaab", (2, 5, "aaa")),
-        ("a+", "bbb", None),
+        ("a+", "xxaaab", (2, 5, "aaa"), {}),
+        ("a+", "bbb", None, {}),
 
-        ("ab", "xxabyy", (2, 4, "ab")),
-        ("ab", "acb", None),
+        ("ab", "xxabyy", (2, 4, "ab"), {}),
+        ("ab", "acb", None, {}),
 
-        ("a|b", "xxb", (2, 3, "b")),
-        ("a|b", "ccc", None),
+        ("a|b", "xxb", (2, 3, "b"), {}),
+        ("a|b", "ccc", None, {}),
 
-        ("a{2,4}", "xaaaay", (1, 5, "aaaa")),
-        ("a{2,4}", "xay", None),
+        ("a{2,4}", "xaaaay", (1, 5, "aaaa"), {}),
+        ("a{2,4}", "xay", None, {}),
 
-        ("^", "abc", (0, 0, "")),
+        ("^", "abc", (0, 0, ""), {}),
+
+        # с группами
+        ("(1:a)", "xxay", (2, 3, "a"), {1: "a"}),
+
+        ("a(1:b+)c", "xxabbbcbbbbccb", (2, 7, "abbbc"), {1: "bbb"}),
+
+        ("(1:a+)(2:b+)", "xxaaabbbzz", (2, 8, "aaabbb"), {1: "aaa", 2: "bbb"}),
+
+        ("(1:a(2:b+)c)", "xxabbbczz", (2, 7, "abbbc"), {1: "abbbc", 2: "bbb"}),
+
+        ("a(1:^)b", "ab", (0, 2, "ab"), {1: ""}),
+
+        ("(1:a)", "xxby", None, {}),
     ],
 )
-def test_search(regex, data, expected_result):
+def test_search(regex, data, expected_result, expected_groups):
     pattern = Pattern.compile(regex)
 
     result = pattern.search(data)
@@ -78,7 +92,13 @@ def test_search(regex, data, expected_result):
 
     assert result.group(0) == expected_value
     assert result[0] == expected_value
-    assert result.group(1) is None
+
+    for group_num, group_value in expected_groups.items():
+        assert result.group(group_num) == group_value
+        assert result[group_num] == group_value
+
+    if not expected_groups:
+        assert result.group(1) is None
 
 @pytest.mark.parametrize(
     "regex, data, expected_bool",
@@ -97,6 +117,21 @@ def test_search(regex, data, expected_result):
 
         ("a{2,4}", "aaaa", True),
         ("a{2,4}", "a", False),
+
+        ("(1:a)", "a", True),
+        ("(1:a)", "b", False),
+
+        ("a(1:b+)c", "abc", True),
+        ("a(1:b+)c", "abbbc", True),
+        ("a(1:b+)c", "ac", False),
+        ("a(1:b+)c", "abbbd", False),
+
+        ("(1:a+)(2:b+)", "aaabbb", True),
+        ("(1:a+)(2:b+)", "aaa", False),
+        ("(1:a+)(2:b+)", "bbb", False),
+
+        ("a(1:^)b", "ab", True),
+        ("a(1:^)b", "a", False),
     ],
 )
 def test_accepts(regex, data, expected_bool):

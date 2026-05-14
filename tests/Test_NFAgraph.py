@@ -711,3 +711,171 @@ def test_build_nfa_simple_cases(case_name):
 
     for state_id, expected_state_edges in expected_edges:
         assert nfa.states[state_id].edges == expected_state_edges
+
+def test_transition_returns_edges():
+    nfa = NFA()
+
+    state_0 = nfa.new_state()
+    state_1 = nfa.new_state()
+    state_2 = nfa.new_state()
+    state_3 = nfa.new_state()
+
+    nfa.add_edge(state_0, state_1, "a")
+    nfa.add_edge(state_0, state_2, "a")
+    nfa.add_edge(state_0, state_3, None, group_start=1)
+
+    result = nfa.transition(state_0, "a")
+
+    assert result == [
+        Edge(to_state=state_1, symbol="a"),
+        Edge(to_state=state_2, symbol="a"),
+    ]
+
+    result = nfa.transition(state_0, None)
+
+    assert result == [
+        Edge(to_state=state_3, symbol=None, group_start=1),
+    ]
+
+    result = nfa.transition(state_0, "b")
+
+    assert result == []
+
+@pytest.mark.parametrize(
+    "ast_root, data, start_pos, expected_result, expected_groups",
+    [
+        (
+            Group(
+                num=1,
+                expr=Literal("a"),
+            ),
+            "xxay",
+            2,
+            (2, 3, "a"),
+            {1: "a"},
+        ),
+
+        (
+            Concat(
+                left=Concat(
+                    left=Literal("a"),
+                    right=Group(
+                        num=1,
+                        expr=Plus(Literal("b")),
+                    ),
+                ),
+                right=Literal("c"),
+            ),
+            "xxabbbcbbbbccb",
+            2,
+            (2, 7, "abbbc"),
+            {1: "bbb"},
+        ),
+
+        (
+            Concat(
+                left=Group(
+                    num=1,
+                    expr=Plus(Literal("a")),
+                ),
+                right=Group(
+                    num=2,
+                    expr=Plus(Literal("b")),
+                ),
+            ),
+            "xxaaabbbzz",
+            2,
+            (2, 8, "aaabbb"),
+            {1: "aaa", 2: "bbb"},
+        ),
+
+        (
+            Group(
+                num=1,
+                expr=Concat(
+                    left=Concat(
+                        left=Literal("a"),
+                        right=Group(
+                            num=2,
+                            expr=Plus(Literal("b")),
+                        ),
+                    ),
+                    right=Literal("c"),
+                ),
+            ),
+            "xxabbbczz",
+            2,
+            (2, 7, "abbbc"),
+            {1: "abbbc", 2: "bbb"},
+        ),
+
+        (
+            Concat(
+                left=Concat(
+                    left=Literal("a"),
+                    right=Group(
+                        num=1,
+                        expr=Epsilon(),
+                    ),
+                ),
+                right=Literal("b"),
+            ),
+            "xab",
+            1,
+            (1, 3, "ab"),
+            {1: ""},
+        ),
+
+        (
+            Group(
+                num=1,
+                expr=Literal("a"),
+            ),
+            "xxby",
+            2,
+            None,
+            {},
+        ),
+    ],
+    ids=[
+        "literal capture group",
+        "a(1:b+)c",
+        "multiple capture groups",
+        "nested capture groups",
+        "empty capture group",
+        "no match",
+    ],
+)
+def test_search_with_groups_and_search_from_position(
+    ast_root,
+    data,
+    start_pos,
+    expected_result,
+    expected_groups,
+):
+    nfa = NFA()
+    nfa.build_nfa(ast_root)
+
+    result_from_position = nfa.search_from_position(data, start_pos)
+    result_search = nfa.search_with_groups(data)
+
+    if expected_result is None:
+        assert result_from_position is None
+        assert result_search is None
+        return
+
+    expected_start, expected_end, expected_value = expected_result
+
+    for result in [result_from_position, result_search]:
+        assert result is not None
+
+        assert result.start == expected_start
+        assert result.end == expected_end
+        assert result.value == expected_value
+
+        assert result.group(0) == expected_value
+        assert result[0] == expected_value
+
+        for group_num, group_value in expected_groups.items():
+            assert result.group(group_num) == group_value
+            assert result[group_num] == group_value

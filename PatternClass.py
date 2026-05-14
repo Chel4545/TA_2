@@ -21,9 +21,12 @@ class Pattern:
 
     def search(self, data: str):
         if self.has_backreferences:
-            pass #использовать nfa
+            pass #доп
 
         if self.has_capture_groups:
+            if self.nfa is None:
+                return None
+
             return self.nfa.search_with_groups(data)
 
         dfa = self.min_dfa or self.dfa
@@ -45,7 +48,7 @@ class Pattern:
 
     def accepts(self, data: str):
         if self.has_backreferences:
-            pass #использовать nfa
+            pass #доп
 
         dfa = self.min_dfa or self.dfa
 

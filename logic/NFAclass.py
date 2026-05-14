@@ -308,3 +308,91 @@ class NFA:
                 result.append(edge)
 
         return result
+
+    def search_from_position(self, data: str, start_pos: int):
+        visited = set()
+        best_result = None
+
+        def dfs(state_id: int,
+                pos: int,
+                group_starts: dict[int, int],
+                groups: dict[int, str],
+        ):
+            nonlocal best_result
+
+            # фикс циклов только из E
+            key = (
+                state_id,
+                pos,
+                tuple(sorted(group_starts.items())),
+                tuple(sorted(groups.items())),
+            )
+
+            if key in visited:
+                return
+
+            visited.add(key)
+
+            state = self.states[state_id]
+
+            # Если состояние принимающее — обновляем лучший результат
+            if state.is_accepting:
+                current_result = MatchResult(
+                    start=start_pos,
+                    end=pos,
+                    value=data[start_pos:pos],
+                    groups=dict(groups),
+                )
+
+                if best_result is None or current_result.end > best_result.end:
+                    best_result = current_result
+
+            # Epsilon-переходы, включая group_start / group_end
+            for edge in self.transition(state_id, None):
+                new_group_starts = dict(group_starts)
+                new_groups = dict(groups)
+
+                # добавляем 3 параметр - начало группы захвата
+                if edge.group_start is not None:
+                    new_group_starts[edge.group_start] = pos
+
+                # получили переход с выходом из группы
+                if edge.group_end is not None:
+                    group_num = edge.group_end
+
+                    if group_num not in new_group_starts:
+                        continue
+
+                    group_start_pos = new_group_starts[group_num]
+                    new_groups[group_num] = data[group_start_pos:pos]
+
+                dfs(edge.to_state, pos, new_group_starts, new_groups)
+
+            # Переходы по текущему символу
+            if pos < len(data):
+                current_symbol = data[pos]
+
+                for edge in self.transition(state_id, current_symbol):
+                    dfs(
+                        edge.to_state,
+                        pos + 1,
+                        dict(group_starts),
+                        dict(groups),
+                    )
+
+        dfs(self.start, start_pos,{},{})
+
+        return best_result
+
+    def search_with_groups(self, data: str):
+        if self.start is None:
+            return None
+
+        for start_pos in range(len(data) + 1):
+            result = self.search_from_position(data, start_pos)
+
+            if result is not None:
+                return result
+
+        return None
+
