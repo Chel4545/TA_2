@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 
+from pythonProject1.logic.NFAclass import NFA
+
+
 #надо будет нфа сделать полем
 @dataclass
 class DFAEdge:
@@ -20,8 +23,21 @@ class DFA:
         self.next_id = 0
         self.alphabet: set[str] = set()
 
+    @staticmethod
+    def validate_dfa(dfa):
+        if dfa is None:
+            raise ValueError("DFA None")
+
+        if dfa.states is None:
+            raise ValueError("DFA.states None")
+
+        if dfa.start is None:
+            raise ValueError("DFA не имеет стартового состояния")
+
     # собираем алфавит
     def get_alphabet(self, nfa) -> set[str]:
+        NFA.validate_nfa(nfa)
+
         alphabet = set()
 
         for state in nfa.states.values():
@@ -33,6 +49,10 @@ class DFA:
 
     # проходимся из текущего множества по E
     def epsilon_closure(self, nfa, state_ids: set[int]) -> frozenset[int]:
+        NFA.validate_nfa(nfa)
+        if state_ids is None:
+            raise ValueError("Отсутствуют вершины с E переходами")
+
         stack = list(state_ids)
         closure = set(state_ids)
 
@@ -48,6 +68,10 @@ class DFA:
 
     # проверка на принимающее состояние
     def is_accepting_subset(self, nfa, subset: frozenset[int]) -> bool:
+        NFA.validate_nfa(nfa)
+        if subset is None:
+            raise ValueError("Отсутствует множество вершин с проверкой на принимаеющие")
+
         for state_id in subset:
             if nfa.states[state_id].is_accepting:
                 return True
@@ -70,6 +94,10 @@ class DFA:
 
     # получить множество достижимых состояний с символом
     def move(self, nfa, state_ids: set[int], symbol: str) -> set[int]:
+        NFA.validate_nfa(nfa)
+        if state_ids is None or symbol is None:
+            raise ValueError("Отсутствуют данные для получения множества достижимых состояний")
+
         result = set()
 
         for state_id in state_ids:
@@ -80,6 +108,8 @@ class DFA:
         return result
 
     def build_dfa(self, nfa):
+        NFA.validate_nfa(nfa)
+
         #получаем алфавит текущего регулярного выражения
         self.alphabet = self.get_alphabet(nfa)
 
@@ -127,6 +157,13 @@ class DFA:
 
     # обход посимвольный(найти если есть)
     def transition(self, state_id: int, symbol: str) -> int | None:
+        if state_id < 0:
+            raise ValueError("неверный id вершины")
+        if symbol is None:
+            raise ValueError("не передан символ")
+        if symbol == "":
+            raise ValueError("пустой символ перехода")
+
         for edge in self.states[state_id].edges:
             if edge.symbol == symbol:
                 return edge.to_state
@@ -134,6 +171,10 @@ class DFA:
 
     # сама логика поиска, сначала ищем потенциальный старт, потом проходимся внутри него
     def search(self, data: str):
+        DFA.validate_dfa(self)
+        if data is None:
+            raise ValueError("переданная строка None")
+
         for start_pos in range(len(data) + 1):
             current_state = self.start
             last_accept_pos = None
@@ -159,10 +200,11 @@ class DFA:
         return None
 
     def accepts(self, data: str) -> bool:
-        current_state = self.start
+        DFA.validate_dfa(self)
+        if data is None:
+            raise ValueError("переданная строка None")
 
-        if current_state is None:
-            return False
+        current_state = self.start
 
         for symbol in data:
             next_state = self.transition(current_state, symbol)
@@ -178,6 +220,8 @@ class DFA:
 
     # дополнение автомата до полного
     def make_complete(self, alphabet: set[str] | None = None):
+        DFA.validate_dfa(self)
+
         # дополняем до разных алфавитов
         if alphabet is None:
             alphabet = set(self.alphabet)
@@ -208,6 +252,8 @@ class DFA:
 
     # клонируем
     def clone(self):
+        DFA.validate_dfa(self)
+
         new_dfa = DFA()
         new_dfa.start = self.start
         new_dfa.next_id = self.next_id
@@ -225,6 +271,8 @@ class DFA:
 
     # дополнение(инверсия принимающих состояний)
     def negate(self, alphabet: set[str] | None = None):
+        DFA.validate_dfa(self)
+
         result = self.clone()
         result.make_complete(alphabet)
 
@@ -235,6 +283,9 @@ class DFA:
 
     # объединение языков
     def union(self, other):
+        DFA.validate_dfa(self)
+        DFA.validate_dfa(other)
+
         # создаем новые автоматы
         dfa1 = self.clone()
         dfa2 = other.clone()
@@ -283,7 +334,7 @@ class DFA:
                 if next_pair not in pair_to_id:
                     next_accepting = (
                             dfa1.states[next_q1].is_accepting
-                            or
+                            or # and
                             dfa2.states[next_q2].is_accepting
                     )
 
@@ -300,15 +351,196 @@ class DFA:
 
         return result
 
-    def diff(self, other):
-        alphabet = set(self.alphabet) | set(other.alphabet)
-        return self.negate(alphabet).union(other).negate(alphabet)
+    # union только принимающее через and
+    def intersection(self, other):
+        DFA.validate_dfa(self)
+        DFA.validate_dfa(other)
 
+        dfa1 = self.clone()
+        dfa2 = other.clone()
+
+        alphabet = set(dfa1.alphabet) | set(dfa2.alphabet)
+
+        dfa1.make_complete(alphabet)
+        dfa2.make_complete(alphabet)
+
+        result = DFA()
+        result.alphabet = set(alphabet)
+
+        pair_to_id = {}
+
+        start_pair = (dfa1.start, dfa2.start)
+
+        start_accepting = (
+                dfa1.states[dfa1.start].is_accepting
+                and
+                dfa2.states[dfa2.start].is_accepting
+        )
+
+        start_id = result.new_state(start_accepting)
+        result.start = start_id
+        pair_to_id[start_pair] = start_id
+
+        unprocessed = [start_pair]
+
+        while unprocessed:
+            current_pair = unprocessed.pop(0)
+            q1, q2 = current_pair
+            current_result_id = pair_to_id[current_pair]
+
+            for symbol in sorted(alphabet):
+                next_q1 = dfa1.transition(q1, symbol)
+                next_q2 = dfa2.transition(q2, symbol)
+
+                next_pair = (next_q1, next_q2)
+
+                if next_pair not in pair_to_id:
+                    next_accepting = (
+                            dfa1.states[next_q1].is_accepting
+                            and
+                            dfa2.states[next_q2].is_accepting
+                    )
+
+                    new_id = result.new_state(next_accepting)
+                    pair_to_id[next_pair] = new_id
+                    unprocessed.append(next_pair)
+
+                result.add_edge(
+                    current_result_id,
+                    pair_to_id[next_pair],
+                    symbol,
+                )
+
+        return result
+
+    def diff(self, other):
+        DFA.validate_dfa(self)
+        DFA.validate_dfa(other)
+
+        alphabet = set(self.alphabet) | set(other.alphabet)
+        return self.intersection(other.negate(alphabet))
+
+    # изоморфность - равенство графов
+    def is_isomorphic(self, other) -> bool:
+        DFA.validate_dfa(self)
+        DFA.validate_dfa(other)
+
+        # сравнение алфавитов(мб нет)
+        if set(self.alphabet) != set(other.alphabet):
+            return False
+
+        # словарь переходов от вершины
+        def transition_map(dfa, state_id: int) -> dict[str, int] | None:
+            result: dict[str, int] = {}
+
+            for edge in dfa.states[state_id].edges:
+                if edge.symbol in result:
+                    # 2 перехода по 1 символу
+                    return None
+
+                result[edge.symbol] = edge.to_state
+
+            return result
+
+        mapping_self_to_other: dict[int, int] = {}
+        mapping_other_to_self: dict[int, int] = {}
+
+        queue: list[tuple[int, int]] = [
+            (self.start, other.start)
+        ]
+
+        mapping_self_to_other[self.start] = other.start
+        mapping_other_to_self[other.start] = self.start
+
+        while queue:
+            state_a_id, state_b_id = queue.pop(0)
+
+            state_a = self.states[state_a_id]
+            state_b = other.states[state_b_id]
+
+            # принимаемость
+            if state_a.is_accepting != state_b.is_accepting:
+                return False
+
+            # переходы
+            transitions_a = transition_map(self, state_a_id)
+            transitions_b = transition_map(other, state_b_id)
+
+            if transitions_a is None or transitions_b is None:
+                return False
+
+            # одинаковые переходы по символам
+            if set(transitions_a.keys()) != set(transitions_b.keys()):
+                return False
+
+            for symbol in sorted(transitions_a.keys()):
+                next_a = transitions_a[symbol]
+                next_b = transitions_b[symbol]
+
+                # если next_a уже сопоставлен, он должен вести именно в next_b
+                if next_a in mapping_self_to_other:
+                    if mapping_self_to_other[next_a] != next_b:
+                        return False
+                    continue
+                else:
+                    mapping_self_to_other[next_a] = next_b
+
+                # обратная проверка: next_b не может соответствовать двум разным next_a
+                if next_b in mapping_other_to_self:
+                    if mapping_other_to_self[next_b] != next_a:
+                        return False
+                    continue
+                else:
+                    mapping_other_to_self[next_b] = next_a
+
+                # добавляем новую пару
+                queue.append((next_a, next_b))
+        return True
+
+    # эквивалентность языков
+    def is_equivalent(self, other) -> bool:
+        DFA.validate_dfa(self)
+        DFA.validate_dfa(other)
+
+        dfa1 = self.clone()
+        dfa2 = other.clone()
+
+        alphabet = set(dfa1.alphabet) | set(dfa2.alphabet)
+
+        dfa1.make_complete(alphabet)
+        dfa2.make_complete(alphabet)
+
+        visited = set()
+        queue = [(dfa1.start, dfa2.start)]
+
+        while queue:
+            q1, q2 = queue.pop(0)
+
+            if (q1, q2) in visited:
+                continue
+
+            visited.add((q1, q2))
+
+            accepting_1 = dfa1.states[q1].is_accepting
+            accepting_2 = dfa2.states[q2].is_accepting
+
+            if accepting_1 != accepting_2:
+                return False
+
+            for symbol in sorted(alphabet):
+                next_q1 = dfa1.transition(q1, symbol)
+                next_q2 = dfa2.transition(q2, symbol)
+
+                queue.append((next_q1, next_q2))
+
+        return True
 
     #минимальный автомат
 
     #получить одно из множеств
     def get_states_by_accepting(self, is_accepting: bool) -> set[int]:
+        DFA.validate_dfa(self)
+
         result: set[int] = set()
 
         for state_id, state in self.states.items():
@@ -319,6 +551,8 @@ class DFA:
 
     #инициализация множеств
     def get_initial_partitions(self) -> list[set[int]]:
+        DFA.validate_dfa(self)
+
         partitions: list[set[int]] = []
 
         non_accepting = self.get_states_by_accepting(False)
@@ -334,6 +568,12 @@ class DFA:
 
     # возвращаем индекс множества, в котором содержиться вершина
     def get_partition_index(self, state_id: int, partitions: list[set[int]]) -> int:
+        DFA.validate_dfa(self)
+        if state_id < 0:
+            raise ValueError("Индекс вершины меньше 0")
+        if partitions is None:
+            raise ValueError("Множество None")
+
         for index, group in enumerate(partitions):
             if state_id in group:
                 return index
@@ -342,6 +582,10 @@ class DFA:
 
     # получаем разные множества
     def refine_partitions(self, partitions: list[set[int]]) -> list[set[int]]:
+        DFA.validate_dfa(self)
+        if partitions is None:
+            raise ValueError("Отсутствуют текущие переданные вершины")
+
         new_partitions: list[set[int]] = []
 
         #множества
@@ -384,6 +628,7 @@ class DFA:
 
     # получаем номер множества и символ по которому можно перейти из текущего
     def get_partition_transitions(self, group: set[int], partitions: list[set[int]]) -> dict[str, int]:
+
         if not group:
             raise ValueError("Пустое множество состояний")
 
@@ -408,8 +653,7 @@ class DFA:
 
     #общий метод минимизации
     def build_min_dfa(self):
-        if self.start is None:
-            raise ValueError("DFA не имеет стартового состояния")
+        DFA.validate_dfa(self)
 
         # начальное разбиение
         partitions = self.get_initial_partitions()

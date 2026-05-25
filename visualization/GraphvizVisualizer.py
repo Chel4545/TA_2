@@ -1,5 +1,6 @@
 from pathlib import Path
 from graphviz import Digraph
+import re
 
 from pythonProject1.logic.ASTclass import (
     Literal,
@@ -14,6 +15,43 @@ from pythonProject1.logic.ASTclass import (
 
 
 class GraphvizVisualizer:
+    def __init__(self, output_dir: str | Path | None = None):
+
+        if output_dir is None:
+            self.output_dir = Path(__file__).resolve().parent / "output"
+        else:
+            self.output_dir = Path(output_dir)
+
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+
+    def safe_filename(self, filename: str) -> str:
+        filename = str(filename)
+
+        replacements = {
+            "\\": "backslash",
+            "/": "_",
+            "|": "_or_",
+            ":": "",
+            ">": "to",
+            "<": "",
+            '"': "",
+            "?": "",
+            "*": "",
+        }
+
+        for old, new in replacements.items():
+            filename = filename.replace(old, new)
+
+        filename = re.sub(r"[\s,()]+", "_", filename)
+        filename = re.sub(r"_+", "_", filename)
+        filename = filename.strip("._ ")
+
+        if filename == "":
+            return "graph"
+
+        return filename
+
     def ast_to_graph(self, root) -> Digraph:
         graph = Digraph("AST")
         graph.attr(rankdir="TB")
@@ -87,19 +125,26 @@ class GraphvizVisualizer:
         graph = Digraph("NFA")
         graph.attr(rankdir="LR")
 
-        # фиктивный старт
         graph.node("start", "", shape="none")
 
         for state_id, state in nfa.states.items():
             shape = "doublecircle" if state.is_accepting else "circle"
             graph.node(str(state_id), str(state_id), shape=shape)
 
-        if nfa.start is not None:
-            graph.edge("start", str(nfa.start))
 
         for from_state_id, state in nfa.states.items():
             for edge in state.edges:
-                label = "^" if edge.symbol is None else edge.symbol
+                if edge.symbol is None:
+                    label = "^"
+
+                    if edge.group_start is not None:
+                        label += f" / start({edge.group_start})"
+
+                    if edge.group_end is not None:
+                        label += f" / end({edge.group_end})"
+                else:
+                    label = edge.symbol
+
                 graph.edge(
                     str(from_state_id),
                     str(edge.to_state),
@@ -118,8 +163,6 @@ class GraphvizVisualizer:
             shape = "doublecircle" if state.is_accepting else "circle"
             graph.node(str(state_id), str(state_id), shape=shape)
 
-        if dfa.start is not None:
-            graph.edge("start", str(dfa.start))
 
         for from_state_id, state in dfa.states.items():
             for edge in state.edges:
@@ -154,14 +197,34 @@ class GraphvizVisualizer:
 
         raise ValueError(f"Неизвестный target: {target}")
 
-    def render(self, graph: Digraph, filename: str, format: str = "png"):
-        output_dir = Path(__file__).resolve().parent
+    def render(
+        self,
+        graph: Digraph,
+        filename: str,
+        format: str = "png",
+        subdir: str | Path | None = None,
+    ) -> Path:
+
+        if subdir is None:
+            output_dir = self.output_dir
+        else:
+            output_dir = self.output_dir / subdir
+
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        output_path = output_dir / filename
+        filename_path = Path(self.safe_filename(filename))
 
-        graph.render(
+        # Если случайно передали "ast.png", убираем расширение,
+        # потому что graphviz сам добавит .png
+        if filename_path.suffix == f".{format}":
+            filename_path = filename_path.with_suffix("")
+
+        output_path = output_dir / filename_path
+
+        rendered_path = graph.render(
             str(output_path),
             format=format,
             cleanup=True,
         )
+
+        return Path(rendered_path)

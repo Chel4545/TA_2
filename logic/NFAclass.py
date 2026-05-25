@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
-from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef
+
+from pygments.lexers.robotframework import Variable
+
+from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef, Node
 from pythonProject1.logic.MatchResult import MatchResult
 from collections import deque
 
@@ -55,7 +58,33 @@ class NFA:
     def mark_accepting(self, state_id: int):
         self.states[state_id].is_accepting = True
 
-    #делаем пары как в лекции (#почему тут не делаем везде принимающим?)
+    # проверки
+    @staticmethod
+    def validate_nfa(nfa):
+        if nfa is None:
+            raise ValueError("NFA None")
+
+        if nfa.states is None:
+            raise ValueError("NFA.states None")
+
+        if nfa.start is None:
+            raise ValueError("NFA не имеет стартового состояния")
+
+    @staticmethod
+    def validate_fragment(fragment: Fragment) -> None:
+        if fragment is None:
+            raise ValueError(f"не может быть None")
+
+        if not isinstance(fragment, Fragment):
+            raise ValueError(f"должен быть Fragment")
+
+        if fragment.start is None:
+            raise ValueError(f"start не может быть None")
+
+        if fragment.accept is None:
+            raise ValueError(f"accept не может быть None")
+
+    #патерны для операций
     def build_literal(self, node: Literal) -> Fragment:
         s = self.new_state()
         f = self.new_state()
@@ -68,15 +97,19 @@ class NFA:
         self.add_edge(s, f, None)
         return Fragment(s, f)
 
-
-    #патерны для операций
     # a.b
     def apply_concat(self, left: Fragment, right: Fragment) -> Fragment:
+        self.validate_fragment(left)
+        self.validate_fragment(right)
+
         self.add_edge(left.accept, right.start, None)
         return Fragment(left.start, right.accept)
 
     # a|b
     def apply_union(self, left: Fragment, right: Fragment) -> Fragment:
+        self.validate_fragment(left)
+        self.validate_fragment(right)
+
         s = self.new_state()
         f = self.new_state()
 
@@ -90,6 +123,8 @@ class NFA:
 
     # r+
     def apply_plus(self, inner: Fragment) -> Fragment:
+        self.validate_fragment(inner)
+
         s = self.new_state()
         f = self.new_state()
 
@@ -101,6 +136,8 @@ class NFA:
 
     # r*
     def apply_star(self, inner: Fragment) -> Fragment:
+        self.validate_fragment(inner)
+
         s = self.new_state()
         f = self.new_state()
 
@@ -116,6 +153,8 @@ class NFA:
 
     # r?
     def apply_optional(self, inner: Fragment) -> Fragment:
+        self.validate_fragment(inner)
+
         s = self.new_state()
         f = self.new_state()
 
@@ -128,6 +167,8 @@ class NFA:
 
     # copy
     def copy_fragment(self, fragment: Fragment) -> Fragment:
+        self.validate_fragment(fragment)
+
         mapping: dict[int, int] = {}
 
         def get_or_create_copy(old_state: int) -> int:
@@ -177,6 +218,8 @@ class NFA:
     # функции для r{}
     # {x:} нижняя граница
     def apply_min_repeat(self, inner: Fragment, min_count: int) -> Fragment:
+        self.validate_fragment(inner)
+
         if min_count < 0:
             raise ValueError("Нижняя граница Repeat не может быть отрицательной")
 
@@ -190,6 +233,9 @@ class NFA:
 
     # {:y} верхняя граница
     def apply_max_repeat(self, result: Fragment, inner: Fragment, diff: int) -> Fragment:
+        self.validate_fragment(result)
+        self.validate_fragment(inner)
+
         if diff < 0:
             raise ValueError("Разность max - min не может быть отрицательной")
 
@@ -202,6 +248,8 @@ class NFA:
 
     # main {x:y}
     def apply_repeat(self, inner: Fragment, min_count: int, max_count: int | None) -> Fragment:
+        self.validate_fragment(inner)
+
         if min_count < 0:
             raise ValueError("Нижняя граница Repeat не может быть отрицательной")
 
@@ -231,6 +279,8 @@ class NFA:
 
     # (n:r)
     def apply_group(self, inner: Fragment, group_num: int) -> Fragment:
+        self.validate_fragment(inner)
+
         s = self.new_state()
         f = self.new_state()
 
@@ -252,9 +302,16 @@ class NFA:
 
     #создание графа
     def build_nfa(self, ast_root) -> Fragment:
+        if ast_root is None:
+            raise ValueError("AST не может быть None")
+        if not isinstance(ast_root, Node):
+            raise ValueError("AST не правильной структуры данных")
+
         def visit(node) -> Fragment:
             if node is None:
                 raise ValueError("AST не может быть None")
+            if not isinstance(ast_root, Node):
+                raise ValueError("AST не правильной структуры данных")
 
             if isinstance(node, Literal):
                 return self.build_literal(node)
@@ -347,7 +404,7 @@ class NFA:
                 if best_result is None or current_result.end > best_result.end:
                     best_result = current_result
 
-            # Epsilon-переходы, включая group_start / group_end
+            # E переходы включая
             for edge in self.transition(state_id, None):
                 new_group_starts = dict(group_starts)
                 new_groups = dict(groups)
@@ -368,7 +425,7 @@ class NFA:
 
                 dfs(edge.to_state, pos, new_group_starts, new_groups)
 
-            # Переходы по текущему символу
+            # переходы по текущему символу
             if pos < len(data):
                 current_symbol = data[pos]
 

@@ -1,3 +1,6 @@
+from pythonProject1.logic.DFAclass import DFA
+
+
 class GNFA:
     def __init__(self):
         self.matrix = []
@@ -6,7 +9,7 @@ class GNFA:
         self.end_index = None
 
         self.INF = "inf"
-        self.EPS = "ε"
+        self.EPS = "^"
 
     def is_inf(self, value):
         return value == self.INF
@@ -19,9 +22,6 @@ class GNFA:
             return value
 
         if len(value) == 1:
-            return value
-
-        if value.startswith("(") and value.endswith(")"):
             return value
 
         return f"({value})"
@@ -56,18 +56,18 @@ class GNFA:
         return result
 
     def regex_star(self, value):
-
         if self.is_inf(value):
             return self.EPS
 
         if self.is_eps(value):
             return self.EPS
 
-        return f"{value}*"
+        positive = f"{self.wrap(value)}+"
+
+        return self.regex_or(self.EPS, positive)
 
     def build_matrix(self, dfa):
-        if dfa.start is None:
-            raise ValueError("DFA не имеет стартового состояния")
+        DFA.validate_dfa(dfa)
 
         n = len(dfa.states)
 
@@ -99,6 +99,8 @@ class GNFA:
         return matrix
 
     def build_regex(self, dfa):
+        DFA.validate_dfa(dfa)
+
         self.matrix = self.build_matrix(dfa)
         active = set(range(self.size))
 
@@ -135,7 +137,7 @@ class GNFA:
 
         result = self.matrix[self.start_index][self.end_index]
 
-        if result == self.EPS:
-            return "^"
+        if self.is_inf(result):
+            return None
 
         return result

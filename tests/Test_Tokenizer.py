@@ -7,7 +7,6 @@ def test_literal():
 
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "a"),
-        Token("EOF"),
     ]
 
 def test_severel_literals():
@@ -17,7 +16,6 @@ def test_severel_literals():
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.LITERAL, "b"),
         Token(TokenType.LITERAL, "c"),
-        Token(TokenType.EOF),
     ]
 
 def test_or_operator():
@@ -27,7 +25,6 @@ def test_or_operator():
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.OR),
         Token(TokenType.LITERAL, "b"),
-        Token(TokenType.EOF),
     ]
 
 def test_plus_operator():
@@ -36,7 +33,6 @@ def test_plus_operator():
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.PLUS),
-        Token(TokenType.EOF),
     ]
 
 
@@ -47,7 +43,6 @@ def test_concat_operator():
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.CONCAT),
         Token(TokenType.LITERAL, "b"),
-        Token(TokenType.EOF),
     ]
 
 def test_epsilon():
@@ -55,7 +50,6 @@ def test_epsilon():
 
     assert tokenizer.tokens == [
         Token(TokenType.EPSILON),
-        Token(TokenType.EOF),
     ]
 
 def test_parentheses():
@@ -65,7 +59,6 @@ def test_parentheses():
         Token(TokenType.LPAREN),
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.RPAREN),
-        Token(TokenType.EOF),
     ]
 
 def test_capture_group_start():
@@ -75,7 +68,6 @@ def test_capture_group_start():
         Token(TokenType.GROUP_START, 1),
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.RPAREN),
-        Token(TokenType.EOF),
     ]
 
 def test_backreference():
@@ -83,7 +75,6 @@ def test_backreference():
 
     assert tokenizer.tokens == [
         Token(TokenType.BACKREF, 1),
-        Token(TokenType.EOF),
     ]
 
 def test_range_with_upper_bound():
@@ -92,7 +83,6 @@ def test_range_with_upper_bound():
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.RANGE, (2, 5)),
-        Token(TokenType.EOF),
     ]
 
 
@@ -102,7 +92,6 @@ def test_range_without_upper_bound():
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.RANGE, (2, None)),
-        Token(TokenType.EOF),
     ]
 
 
@@ -111,7 +100,6 @@ def test_escaped_or():
 
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "|"),
-        Token(TokenType.EOF),
     ]
 
 
@@ -120,7 +108,6 @@ def test_escaped_plus():
 
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "+"),
-        Token(TokenType.EOF),
     ]
 
 
@@ -129,9 +116,16 @@ def test_escaped_hash():
 
     assert tokenizer.tokens == [
         Token(TokenType.LITERAL, "#"),
-        Token(TokenType.EOF),
     ]
 
+def test_empty_string():
+    tokenizer = Tokenizer("")
+
+    assert tokenizer.tokens == []
+
+def test_error_none_text():
+    with pytest.raises(ValueError):
+        Tokenizer(None)
 
 def test_error_after_hash():
     with pytest.raises(ValueError):

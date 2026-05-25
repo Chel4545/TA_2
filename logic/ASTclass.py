@@ -126,15 +126,19 @@ class AST:
         return 0
 
     def parse(self, tokens: list[Token]) -> Node:
+        if tokens is None:
+            raise ValueError("Вместо списка токенов передан None")
+
+        if len(tokens) == 0:
+            raise ValueError("Пустое регулярное выражение")
+
         tokens = self.insert_concat_tokens(tokens)
 
         nodes: list[Node]  = []
         ops:   list[Token] = []
-        group_node_positions: list[int]   = []
+        group_node_positions: list[int] = []
 
         for token in tokens:
-            if token.type == TokenType.EOF:
-                break
 
             if token.type == TokenType.LITERAL:
                 nodes.append(Literal(token.value))

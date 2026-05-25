@@ -139,6 +139,7 @@ def test_accepts(regex, data, expected_bool):
 
     assert pattern.accepts(data) is expected_bool
 
+# проверка эквивалентности
 @pytest.mark.parametrize(
     "regex, expected_restored",
     [

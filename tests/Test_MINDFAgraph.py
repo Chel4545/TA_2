@@ -1,9 +1,11 @@
 import pytest
 
-from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef
+from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef, AST
 from pythonProject1.logic.NFAclass import NFA
 
 from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
+from pythonProject1.logic.Tokenizer import Tokenizer
+from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
 
 def test_get_states_by_accepting():
     dfa = DFA()
@@ -12,6 +14,7 @@ def test_get_states_by_accepting():
     state_1 = dfa.new_state(is_accepting=True)
     state_2 = dfa.new_state(is_accepting=True)
     state_3 = dfa.new_state(is_accepting=False)
+    dfa.start = state_0
 
     accepting_states = dfa.get_states_by_accepting(True)
 
@@ -30,10 +33,18 @@ def test_get_states_by_accepting():
 def test_get_partition_index():
     dfa = DFA()
 
+    state_0 = dfa.new_state(is_accepting=False)
+    state_1 = dfa.new_state(is_accepting=False)
+    state_2 = dfa.new_state(is_accepting=False)
+    state_3 = dfa.new_state(is_accepting=False)
+    state_4 = dfa.new_state(is_accepting=False)
+    state_5 = dfa.new_state(is_accepting=False)
+    dfa.start = state_0
+
     partitions = [
-        {0, 1, 2},
-        {3, 4},
-        {5},
+        {state_0, state_1, state_2},
+        {state_3, state_4},
+        {state_5},
     ]
 
     result = dfa.get_partition_index(0, partitions)
@@ -66,11 +77,9 @@ def test_refine_partitions():
     state_3 = dfa.new_state(is_accepting=True)
     state_4 = dfa.new_state(is_accepting=True)
 
+    dfa.start = state_0
     dfa.alphabet = {"0", "1"}
 
-    # Было разбиение:
-    # {0, 1, 2} — непринимающие
-    # {3, 4}    — принимающие
     partitions = [
         {state_0, state_1, state_2},
         {state_3, state_4},
@@ -94,12 +103,15 @@ def test_refine_partitions():
     dfa.add_edge(state_2, state_0, "0")
     dfa.add_edge(state_2, state_4, "1")
 
-    # state_3 и state_4 ведут себя одинаково:
+    # state_3:
     # 0 -> {3,4}
     # 1 -> {3,4}
     dfa.add_edge(state_3, state_3, "0")
     dfa.add_edge(state_3, state_4, "1")
 
+    # state_4:
+    # 0 -> {3,4}
+    # 1 -> {3,4}
     dfa.add_edge(state_4, state_3, "0")
     dfa.add_edge(state_4, state_4, "1")
 
@@ -120,6 +132,7 @@ def test_get_partition_transitions():
     state_3 = dfa.new_state(is_accepting=True)
     state_4 = dfa.new_state(is_accepting=True)
 
+    dfa.start = state_0
     dfa.alphabet = {"a", "b"}
 
     partitions = [
@@ -141,62 +154,122 @@ def test_get_partition_transitions():
         "b": 1,
     }
 
+
+CASES_BUILD_MIN_DFA = {
+    "a|b -> merge two accepting states": (
+        "a|b",
+        {"a", "b"},
+        3,
+        2,
+        ["a", "b"],
+        ["", "ab", "aa", "bb", "c"],
+        "min_dfa_a_or_b",
+    ),
+
+    "a+ -> already minimal": (
+        "a+",
+        {"a"},
+        2,
+        2,
+        ["a", "aa", "aaa", "aaaa"],
+        ["", "b", "ab"],
+        "min_dfa_a_plus",
+    ),
+
+    "ab|ac -> merge final accepting states": (
+        "ab|ac",
+        {"a", "b", "c"},
+        4,
+        3,
+        ["ab", "ac"],
+        ["", "a", "b", "c", "abc", "aa"],
+        "min_dfa_ab_or_ac",
+    ),
+
+    "(a|b)+ -> nonempty words over a,b": (
+        "(a|b)+",
+        {"a", "b"},
+        3,
+        2,
+        ["a", "b", "ab", "ba", "abba"],
+        ["", "c", "abc"],
+        "min_dfa_a_or_b_plus",
+    ),
+
+    "^|a -> epsilon or a": (
+        "^|a",
+        {"a"},
+        2,
+        2,
+        ["", "a"],
+        ["aa", "b"],
+        "min_dfa_epsilon_or_a",
+    ),
+
+    "a{2,4} -> bounded repeat": (
+        "a{2,4}",
+        {"a"},
+        5,
+        5,
+        ["aa", "aaa", "aaaa"],
+        ["", "a", "aaaaa", "b"],
+        "min_dfa_a_2_4",
+    ),
+}
+
+@pytest.mark.parametrize("case_name", CASES_BUILD_MIN_DFA.keys())
+def test_build_min_dfa(case_name):
+    (
+        regex,
+        expected_alphabet,
+        expected_dfa_state_count,
+        expected_min_dfa_state_count,
+        accepted_data,
+        rejected_data,
+        filename,
+    ) = CASES_BUILD_MIN_DFA[case_name]
+
+    visualizer = GraphvizVisualizer()
+
+    tokenizer = Tokenizer(regex)
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
+    nfa = NFA()
+    nfa.build_nfa(ast_root)
+
     dfa = DFA()
+    dfa.build_dfa(nfa)
 
-    with pytest.raises(ValueError):
-        dfa.get_partition_transitions(
-            group=set(),
-            partitions=[],
-        )
-
-def test_build_min_dfa():
-    dfa = DFA()
-
-    state_0 = dfa.new_state(is_accepting=False)
-    state_1 = dfa.new_state(is_accepting=False)
-    state_2 = dfa.new_state(is_accepting=False)
-    state_3 = dfa.new_state(is_accepting=True)
-    state_4 = dfa.new_state(is_accepting=True)
-
-    dfa.start = state_0
-    dfa.alphabet = {"0", "1"}
-
-
-    dfa.add_edge(state_0, state_1, "0")
-    dfa.add_edge(state_0, state_2, "1")
-
-    dfa.add_edge(state_1, state_2, "0")
-    dfa.add_edge(state_1, state_3, "1")
-
-    dfa.add_edge(state_2, state_1, "0")
-    dfa.add_edge(state_2, state_4, "1")
-
-    dfa.add_edge(state_3, state_3, "0")
-    dfa.add_edge(state_3, state_4, "1")
-
-    dfa.add_edge(state_4, state_3, "0")
-    dfa.add_edge(state_4, state_4, "1")
+    dfa_graph = visualizer.dfa_to_graph(dfa)
+    visualizer.render(
+        dfa_graph,
+        filename + "_dfa",
+        subdir="tests/min_dfa",
+    )
 
     min_dfa = dfa.build_min_dfa()
 
-    assert min_dfa.start == 0
-    assert min_dfa.alphabet == {"0", "1"}
-    assert len(min_dfa.states) == 3
+    min_dfa_graph = visualizer.dfa_to_graph(min_dfa)
+    visualizer.render(
+        min_dfa_graph,
+        filename + "_min_dfa",
+        subdir="tests/min_dfa",
+    )
 
-    assert min_dfa.states[0].is_accepting is False
-    assert min_dfa.states[0].edges == [
-        DFAEdge(to_state=1, symbol="0"),
-        DFAEdge(to_state=1, symbol="1"),
-    ]
+    assert dfa.alphabet == expected_alphabet
+    assert min_dfa.alphabet == expected_alphabet
 
-    assert min_dfa.states[1].is_accepting is False
-    assert min_dfa.states[1].edges == [
-        DFAEdge(to_state=1, symbol="0"),
-        DFAEdge(to_state=2, symbol="1"),
-    ]
+    assert len(dfa.states) == expected_dfa_state_count
+    assert len(min_dfa.states) == expected_min_dfa_state_count
 
-    assert min_dfa.states[2].is_accepting is True
-    assert min_dfa.states[2].edges == [
-        DFAEdge(to_state=2, symbol="0"),
-        DFAEdge(to_state=2, symbol="1"),
-    ]
+    assert dfa.is_equivalent(min_dfa) is True
+
+    for data in accepted_data:
+        assert dfa.accepts(data) is True
+        assert min_dfa.accepts(data) is True
+
+    for data in rejected_data:
+        assert dfa.accepts(data) is False
+        assert min_dfa.accepts(data) is False

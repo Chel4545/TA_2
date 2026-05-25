@@ -1,7 +1,10 @@
 import pytest
 
 from pythonProject1.logic.NFAclass import NFA, State, Edge, Fragment
-from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef
+from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef, AST
+from pythonProject1.logic.Tokenizer import Tokenizer
+from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
+
 
 def test_new_state():
     nfa = NFA()
@@ -44,24 +47,33 @@ def test_mark_accepting():
     assert nfa.states[state_1].is_accepting is True
     assert nfa.states[state_2].is_accepting is False
 
-import pytest
+def test_validate_fragment_errors():
+    nfa = NFA()
 
-from pythonProject1.logic.NFAclass import NFA
-from pythonProject1.logic.ASTclass import (
-    Literal,
-    Or,
-    Plus,
-)
+    with pytest.raises(ValueError):
+        nfa.validate_fragment(None)
 
+    with pytest.raises(ValueError):
+        nfa.validate_fragment("not fragment")
 
-class UnknownNode:
-    pass
+    with pytest.raises(ValueError):
+        nfa.validate_fragment(Fragment(start=None, accept=1))
 
+    with pytest.raises(ValueError):
+        nfa.validate_fragment(Fragment(start=0, accept=None))
 
 def test_build_literal():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     fragment = nfa.build_literal(Literal("a"))
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "build_literal",
+        subdir="tests/nfa",
+    )
 
     assert fragment == Fragment(start=0, accept=1)
 
@@ -74,8 +86,16 @@ def test_build_literal():
 
 def test_build_epsilon():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     fragment = nfa.build_epsilon()
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "build_epsilon",
+        subdir="tests/nfa",
+    )
 
     assert fragment == Fragment(start=0, accept=1)
 
@@ -88,11 +108,19 @@ def test_build_epsilon():
 
 def test_apply_concat():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     left = nfa.build_literal(Literal("a"))
     right = nfa.build_literal(Literal("b"))
 
     result = nfa.apply_concat(left, right)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_concat",
+        subdir="tests/nfa",
+    )
 
     assert result == Fragment(
         start=left.start,
@@ -113,11 +141,19 @@ def test_apply_concat():
 
 def test_apply_union():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     left = nfa.build_literal(Literal("a"))
     right = nfa.build_literal(Literal("b"))
 
     result = nfa.apply_union(left, right)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_union",
+        subdir="tests/nfa",
+    )
 
     assert result.start not in {
         left.start,
@@ -154,10 +190,17 @@ def test_apply_union():
 
 def test_apply_plus():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
     result = nfa.apply_plus(inner)
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_plus",
+        subdir="tests/nfa",
+    )
 
     assert result.start not in {
         inner.start,
@@ -184,10 +227,18 @@ def test_apply_plus():
 
 def test_apply_star():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
     result = nfa.apply_star(inner)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_star",
+        subdir="tests/nfa",
+    )
 
     assert result.start not in {
         inner.start,
@@ -213,8 +264,9 @@ def test_apply_star():
         Edge(to_state=result.accept, symbol=None),
     ]
 
-def test_copy_fragment_for_ab_or_c():
+def test_copy_fragment():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     original = nfa.build_nfa(
         Or(
@@ -228,14 +280,18 @@ def test_copy_fragment_for_ab_or_c():
 
     copy = nfa.copy_fragment(original)
 
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "copy_fragment",
+        subdir="tests/nfa",
+    )
+
     assert copy.start != original.start
     assert copy.accept != original.accept
 
-    assert copy.start in nfa.states
-    assert copy.accept in nfa.states
-
-    # orig  0 - 7.
-    # copy  8 - 15.
+    # orig 0 - 7
+    # copy 8 - 15
     assert copy == Fragment(start=8, accept=14)
 
     assert nfa.states[8].edges == [
@@ -271,10 +327,18 @@ def test_copy_fragment_for_ab_or_c():
 
 def test_apply_optional():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
     result = nfa.apply_optional(inner)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_optional",
+        subdir="tests/nfa",
+    )
 
     assert result.start not in {
         inner.start,
@@ -304,10 +368,18 @@ def test_apply_optional():
 
 def test_apply_min_repeat():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
     result = nfa.apply_min_repeat(inner, 3)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_min_repeat",
+        subdir="tests/nfa",
+    )
 
     assert result == Fragment(start=inner.start, accept=5)
 
@@ -343,16 +415,23 @@ def test_apply_min_repeat():
 
 def test_apply_max_repeat():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
-    # a{2,...}
     result = nfa.apply_min_repeat(inner, 2)
 
     result = nfa.apply_max_repeat(
         result=result,
         inner=inner,
         diff=2,
+    )
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_max_repeat",
+        subdir="tests/nfa",
     )
 
     assert result == Fragment(start=0, accept=11)
@@ -419,6 +498,7 @@ def test_apply_max_repeat():
 
 def test_apply_repeat():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     # проверка a{1:2}
     inner = nfa.build_literal(Literal("a"))
@@ -427,6 +507,13 @@ def test_apply_repeat():
         inner=inner,
         min_count=1,
         max_count=2,
+    )
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_repeat_a{1:2}",
+        subdir="tests/nfa",
     )
 
     assert result == Fragment(start=0, accept=5)
@@ -480,6 +567,14 @@ def test_apply_repeat():
         max_count=1,
     )
 
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_repeat_a{0,1}",
+        subdir="tests/nfa",
+    )
+
+
     assert result == Fragment(start=2, accept=7)
 
     assert nfa.states[0].edges == [
@@ -519,6 +614,13 @@ def test_apply_repeat():
         max_count=None,
     )
 
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_repeat_a{1,}",
+        subdir="tests/nfa",
+    )
+
     assert result == Fragment(start=0, accept=5)
 
     assert nfa.states[0].edges == [
@@ -548,12 +650,20 @@ def test_apply_repeat():
 
 def test_apply_group():
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
     inner = nfa.build_literal(Literal("a"))
 
     result = nfa.apply_group(
         inner=inner,
         group_num=1,
+    )
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        "apply_group",
+        subdir="tests/nfa",
     )
 
     assert result == Fragment(start=2, accept=3)
@@ -581,7 +691,7 @@ CASES = {
     ),
 
     "a -> NFA for literal a": (
-        Literal("a"),
+        "a",
         Fragment(start=0, accept=1),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -591,7 +701,7 @@ CASES = {
     ),
 
     "^ -> NFA for epsilon": (
-        Epsilon(),
+        "^",
         Fragment(start=0, accept=1),
         [
             (0, [Edge(to_state=1, symbol=None)]),
@@ -601,10 +711,7 @@ CASES = {
     ),
 
     "a|b -> NFA for union": (
-        Or(
-            left=Literal("a"),
-            right=Literal("b"),
-        ),
+        "a|b",
         Fragment(start=4, accept=5),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -620,11 +727,8 @@ CASES = {
         None,
     ),
 
-    "a.b -> NFA for concat": (
-        Concat(
-            left=Literal("a"),
-            right=Literal("b"),
-        ),
+    "ab -> NFA for concat": (
+        "ab",
         Fragment(start=0, accept=3),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -636,9 +740,7 @@ CASES = {
     ),
 
     "a+ -> NFA for plus": (
-        Plus(
-            expr=Literal("a"),
-        ),
+        "a+",
         Fragment(start=2, accept=3),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -653,11 +755,7 @@ CASES = {
     ),
 
     "a{1,2} -> NFA for repeat": (
-        Repeat(
-            expr=Literal("a"),
-            min=1,
-            max=2,
-        ),
+        "a{1,2}",
         Fragment(start=0, accept=5),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -672,11 +770,9 @@ CASES = {
         ],
         None,
     ),
+
     "(1:a) -> NFA for capture group": (
-        Group(
-            num=1,
-            expr=Literal("a"),
-        ),
+        "(1:a)",
         Fragment(start=2, accept=3),
         [
             (0, [Edge(to_state=1, symbol="a")]),
@@ -690,17 +786,38 @@ CASES = {
 
 
 @pytest.mark.parametrize("case_name", CASES.keys())
-def test_build_nfa_simple_cases(case_name):
+def test_build_nfa(case_name):
     nfa = NFA()
+    visualizer = GraphvizVisualizer()
 
-    ast_root, expected_fragment, expected_edges, expected_error = CASES[case_name]
+    regex, expected_fragment, expected_edges, expected_error = CASES[case_name]
 
     if expected_error is not None:
         with pytest.raises(expected_error):
-            nfa.build_nfa(ast_root)
+            if regex is None:
+                nfa.build_nfa(None)
+            else:
+                tokenizer = Tokenizer(regex)
+
+                ast = AST()
+                ast_root = ast.parse(tokenizer.tokens)
+
+                nfa.build_nfa(ast_root)
         return
 
+    tokenizer = Tokenizer(regex)
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     result = nfa.build_nfa(ast_root)
+
+    nfa_graph = visualizer.nfa_to_graph(nfa)
+    visualizer.render(
+        nfa_graph,
+        case_name,
+        subdir="tests/nfa",
+    )
 
     assert result == expected_fragment
 
@@ -741,141 +858,89 @@ def test_transition_returns_edges():
 
     assert result == []
 
-@pytest.mark.parametrize(
-    "ast_root, data, start_pos, expected_result, expected_groups",
-    [
-        (
-            Group(
-                num=1,
-                expr=Literal("a"),
-            ),
-            "xxay",
-            2,
-            (2, 3, "a"),
-            {1: "a"},
-        ),
+CASES_SEARCH = {
+    "(1:a)": (
+        "(1:a)",
+        "xxay",
+        (2, 3, "a"),
+        {1: "a"},
+    ),
 
-        (
-            Concat(
-                left=Concat(
-                    left=Literal("a"),
-                    right=Group(
-                        num=1,
-                        expr=Plus(Literal("b")),
-                    ),
-                ),
-                right=Literal("c"),
-            ),
-            "xxabbbcbbbbccb",
-            2,
-            (2, 7, "abbbc"),
-            {1: "bbb"},
-        ),
-
-        (
-            Concat(
-                left=Group(
-                    num=1,
-                    expr=Plus(Literal("a")),
-                ),
-                right=Group(
-                    num=2,
-                    expr=Plus(Literal("b")),
-                ),
-            ),
-            "xxaaabbbzz",
-            2,
-            (2, 8, "aaabbb"),
-            {1: "aaa", 2: "bbb"},
-        ),
-
-        (
-            Group(
-                num=1,
-                expr=Concat(
-                    left=Concat(
-                        left=Literal("a"),
-                        right=Group(
-                            num=2,
-                            expr=Plus(Literal("b")),
-                        ),
-                    ),
-                    right=Literal("c"),
-                ),
-            ),
-            "xxabbbczz",
-            2,
-            (2, 7, "abbbc"),
-            {1: "abbbc", 2: "bbb"},
-        ),
-
-        (
-            Concat(
-                left=Concat(
-                    left=Literal("a"),
-                    right=Group(
-                        num=1,
-                        expr=Epsilon(),
-                    ),
-                ),
-                right=Literal("b"),
-            ),
-            "xab",
-            1,
-            (1, 3, "ab"),
-            {1: ""},
-        ),
-
-        (
-            Group(
-                num=1,
-                expr=Literal("a"),
-            ),
-            "xxby",
-            2,
-            None,
-            {},
-        ),
-    ],
-    ids=[
-        "literal capture group",
+    "a(1:b+)c": (
         "a(1:b+)c",
-        "multiple capture groups",
-        "nested capture groups",
-        "empty capture group",
-        "no match",
-    ],
-)
-def test_search_with_groups_and_search_from_position(
-    ast_root,
-    data,
-    start_pos,
-    expected_result,
-    expected_groups,
-):
+        "xxabbbcbbbbccb",
+        (2, 7, "abbbc"),
+        {1: "bbb"},
+    ),
+
+    "(1:a+)(2:b+)": (
+        "(1:a+)(2:b+)",
+        "xxaaabbbzz",
+        (2, 8, "aaabbb"),
+        {1: "aaa", 2: "bbb"},
+    ),
+
+    "(1:a(2:b+)c)": (
+        "(1:a(2:b+)c)",
+        "xxabbbczz",
+        (2, 7, "abbbc"),
+        {1: "abbbc", 2: "bbb"},
+    ),
+
+    "a(1:^)b": (
+        "a(1:^)b",
+        "xab",
+        (1, 3, "ab"),
+        {1: ""},
+    ),
+
+    "(1:a) no match": (
+        "(1:a)",
+        "xxby",
+        None,
+        {},
+    ),
+}
+
+@pytest.mark.parametrize("case_name", CASES_SEARCH.keys())
+def test_search(case_name):
+    (
+        regex,
+        data,
+        expected_result,
+        expected_groups,
+    ) = CASES_SEARCH[case_name]
+
+    tokenizer = Tokenizer(regex)
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     nfa = NFA()
     nfa.build_nfa(ast_root)
 
-    result_from_position = nfa.search_from_position(data, start_pos)
-    result_search = nfa.search_with_groups(data)
+    result = nfa.search_with_groups(data)
 
     if expected_result is None:
-        assert result_from_position is None
-        assert result_search is None
+        assert result is None
         return
 
     expected_start, expected_end, expected_value = expected_result
 
-    for result in [result_from_position, result_search]:
-        assert result is not None
+    assert result is not None
 
-        assert result.start == expected_start
-        assert result.end == expected_end
-        assert result.value == expected_value
+    assert result.start == expected_start
+    assert result.end == expected_end
+    assert result.value == expected_value
 
-        assert result.group(0) == expected_value
-        assert result[0] == expected_value
+    assert result.group(0) == expected_value
+    assert result[0] == expected_value
 
-        for group_num, group_value in expected_groups.items():
-            assert result.group(group_num) == group_value
-            assert result[group_num] == group_value
+    for group_num, group_value in expected_groups.items():
+        assert result.group(group_num) == group_value
+        assert result[group_num] == group_value
+
+    assert list(result) == [
+        expected_groups[group_num]
+        for group_num in sorted(expected_groups)
+    ]

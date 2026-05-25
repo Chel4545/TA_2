@@ -90,7 +90,7 @@ class Pattern:
         return new_pattern
 
     @classmethod
-    def compile(cls, regex: str) -> Pattern:
+    def compile(cls, regex: str) -> Pattern | None:
         pattern = cls(regex) #создание объекта класса
 
         tokenizer = Tokenizer(regex)

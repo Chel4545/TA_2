@@ -13,19 +13,18 @@ from pythonProject1.logic.ASTclass import (
     Group,
     BackRef,
 )
+from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
 
 CASES = {
     "ab -> a.b": (
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -35,7 +34,6 @@ CASES = {
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
@@ -43,7 +41,6 @@ CASES = {
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -53,7 +50,6 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RPAREN),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LPAREN),
@@ -61,7 +57,6 @@ CASES = {
             Token(TokenType.RPAREN),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -73,7 +68,6 @@ CASES = {
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LPAREN),
@@ -83,7 +77,6 @@ CASES = {
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -92,14 +85,12 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.PLUS),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.PLUS),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -108,14 +99,12 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RANGE, (2, 3)),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RANGE, (2, 3)),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -123,13 +112,11 @@ CASES = {
         [
             Token(TokenType.EPSILON),
             Token(TokenType.LITERAL, "a"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.EPSILON),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "a"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -137,13 +124,11 @@ CASES = {
         [
             Token(TokenType.BACKREF, 1),
             Token(TokenType.LITERAL, "a"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.BACKREF, 1),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "a"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -153,7 +138,6 @@ CASES = {
             Token(TokenType.GROUP_START, 1),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
@@ -161,7 +145,6 @@ CASES = {
             Token(TokenType.GROUP_START, 1),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -170,13 +153,11 @@ CASES = {
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LPAREN),
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -185,13 +166,11 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.OR),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.OR),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -199,12 +178,10 @@ CASES = {
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.PLUS),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.PLUS),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -212,12 +189,10 @@ CASES = {
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RANGE, (2, 3)),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.RANGE, (2, 3)),
-            Token(TokenType.EOF),
         ],
     ),
 
@@ -226,23 +201,17 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
     ),
 }
 
 
-@pytest.mark.parametrize(
-    "input_tokens, expected_tokens",
-    CASES.values(),
-    ids=CASES.keys(),
-)
+@pytest.mark.parametrize("input_tokens, expected_tokens", CASES.values(), ids=CASES.keys())
 def test_insert_concat_tokens(input_tokens, expected_tokens):
     ast = AST()
 
@@ -252,6 +221,7 @@ def test_insert_concat_tokens(input_tokens, expected_tokens):
 
 def test_apply_op_or_and_concat():
     ast = AST()
+    visualizer = GraphvizVisualizer()
 
     # OR
     nodes = [
@@ -260,6 +230,14 @@ def test_apply_op_or_and_concat():
     ]
 
     ast.apply_op(Token(TokenType.OR), nodes)
+
+    ast_graph = visualizer.ast_to_graph(nodes[0])
+    visualizer.render(
+        ast_graph,
+        "apply_op_or",
+        subdir="tests/ast",
+    )
+
 
     assert nodes == [
         Or(
@@ -283,6 +261,13 @@ def test_apply_op_or_and_concat():
 
     ast.apply_op(Token(TokenType.CONCAT), nodes)
 
+    ast_graph = visualizer.ast_to_graph(nodes[0])
+    visualizer.render(
+        ast_graph,
+        "apply_op_concat",
+        subdir="tests/ast",
+    )
+
     assert nodes == [
         Concat(
             left=Literal("a"),
@@ -299,10 +284,11 @@ def test_apply_op_or_and_concat():
 
     # unknown operator
     with pytest.raises(ValueError):
-        ast.apply_op(Token(TokenType.EOF), [Literal("a"), Literal("a")])
+        ast.apply_op(Token(TokenType.BACKREF), [Literal("a"), Literal("a")])
 
 def test_apply_postfix_plus_and_range():
     ast = AST()
+    visualizer = GraphvizVisualizer()
 
     # PLUS
     nodes = [
@@ -310,6 +296,13 @@ def test_apply_postfix_plus_and_range():
     ]
 
     ast.apply_postfix(Token(TokenType.PLUS), nodes)
+
+    ast_graph = visualizer.ast_to_graph(nodes[0])
+    visualizer.render(
+        ast_graph,
+        "apply_postfix_plus",
+        subdir="tests/ast",
+    )
 
     assert nodes == [
         Plus(
@@ -328,6 +321,13 @@ def test_apply_postfix_plus_and_range():
 
     ast.apply_postfix(Token(TokenType.RANGE, (2, 3)), nodes)
 
+    ast_graph = visualizer.ast_to_graph(nodes[0])
+    visualizer.render(
+        ast_graph,
+        "apply_postfix_range_2_3",
+        subdir="tests/ast",
+    )
+
     assert nodes == [
         Repeat(
             expr=Literal("a"),
@@ -343,6 +343,13 @@ def test_apply_postfix_plus_and_range():
 
     ast.apply_postfix(Token(TokenType.RANGE, (2, None)), nodes)
 
+    ast_graph = visualizer.ast_to_graph(nodes[0])
+    visualizer.render(
+        ast_graph,
+        "apply_postfix_range_2_none",
+        subdir="tests/ast",
+    )
+
     assert nodes == [
         Repeat(
             expr=Literal("a"),
@@ -357,26 +364,25 @@ def test_apply_postfix_plus_and_range():
 
     # unknown postfix operator
     with pytest.raises(ValueError):
-        ast.apply_postfix(Token(TokenType.EOF), [Literal("a"), Literal("a")])
+        ast.apply_postfix(Token(TokenType.BACKREF), [Literal("a"), Literal("a")])
 
 
 def test_precedence():
     ast = AST()
 
-    res_or     = ast.precedence(Token(TokenType.OR))
+    res_or = ast.precedence(Token(TokenType.OR))
     assert res_or == 1
 
     res_concat = ast.precedence(Token(TokenType.CONCAT))
     assert res_concat == 2
 
-    res_other  = ast.precedence(Token(TokenType.EOF))
+    res_other = ast.precedence(Token(TokenType.BACKREF))
     assert res_other == 0
 
 CASES = {
     "a -> Literal(a)": (
         [
             Token(TokenType.LITERAL, "a"),
-            Token(TokenType.EOF),
         ],
         Literal("a"),
         None,
@@ -385,7 +391,6 @@ CASES = {
     "^ -> Epsilon": (
         [
             Token(TokenType.EPSILON),
-            Token(TokenType.EOF),
         ],
         Epsilon(),
         None,
@@ -394,7 +399,6 @@ CASES = {
     r"\1 -> BackRef(1)": (
         [
             Token(TokenType.BACKREF, 1),
-            Token(TokenType.EOF),
         ],
         BackRef(1),
         None,
@@ -404,7 +408,6 @@ CASES = {
         [
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.PLUS),
-            Token(TokenType.EOF),
         ],
         Plus(
             expr=Literal("a"),
@@ -415,7 +418,6 @@ CASES = {
     "( -> ValueError": (
         [
             Token(TokenType.LPAREN),
-            Token(TokenType.EOF),
         ],
         None,
         ValueError,
@@ -424,7 +426,6 @@ CASES = {
     "(1: -> ValueError": (
         [
             Token(TokenType.GROUP_START),
-            Token(TokenType.EOF),
         ],
         None,
         ValueError,
@@ -435,7 +436,6 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.OR),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         Or(Literal("a"), Literal("b")),
         None,
@@ -447,7 +447,6 @@ CASES = {
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.OR),
             Token(TokenType.LITERAL, "c"),
-            Token(TokenType.EOF),
         ],
         Or(
             left=Concat(
@@ -465,7 +464,6 @@ CASES = {
             Token(TokenType.OR),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.LITERAL, "c"),
-            Token(TokenType.EOF),
         ],
         Or(
             left=Literal("a"),
@@ -479,7 +477,6 @@ CASES = {
     ") -> ValueError": (
         [
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         None,
         ValueError,
@@ -489,7 +486,6 @@ CASES = {
             Token(TokenType.LITERAL, "a"),
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
-            Token(TokenType.EOF),
         ],
         Concat(
             left=Literal("a"),
@@ -500,7 +496,6 @@ CASES = {
     "(1:) -> ValueError": (
         [
             Token(TokenType.GROUP_START, 1),
-            Token(TokenType.EOF),
         ],
         None,
         ValueError
@@ -512,7 +507,6 @@ CASES = {
             Token(TokenType.CONCAT),
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         Group(
             num=1,
@@ -529,7 +523,6 @@ CASES = {
             Token(TokenType.LITERAL, "b"),
             Token(TokenType.PLUS),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         Group(
             num=1,
@@ -537,19 +530,20 @@ CASES = {
         ),
         None,
     ),
-    "empty -> ValueError": (
-        [
-            Token(TokenType.EOF),
-        ],
+    "None -> ValueError": (
+        None,
         None,
         ValueError,
     ),
-
+    "empty -> ValueError": (
+        [],
+        None,
+        ValueError,
+    ),
     "() -> ValueError": (
         [
             Token(TokenType.LPAREN),
             Token(TokenType.RPAREN),
-            Token(TokenType.EOF),
         ],
         None,
         ValueError,
@@ -560,6 +554,7 @@ CASES = {
 @pytest.mark.parametrize("case_name", CASES.keys())
 def test_parse(case_name):
     ast = AST()
+    visualizer = GraphvizVisualizer()
 
     tokens, expected_ast, expected_error = CASES[case_name]
 
@@ -568,6 +563,14 @@ def test_parse(case_name):
             ast.parse(tokens)
     else:
         result = ast.parse(tokens)
+
+        ast_graph = visualizer.ast_to_graph(result)
+        visualizer.render(
+            ast_graph,
+            case_name,
+            subdir="tests/ast",
+        )
+
         assert result == expected_ast
 
 def test_analyze_capture_groups():
@@ -577,7 +580,6 @@ def test_analyze_capture_groups():
         Token(TokenType.GROUP_START, 1),
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.RPAREN),
-        Token(TokenType.EOF),
     ]
 
     result = ast.analyze_capture_groups(tokens)
@@ -588,7 +590,6 @@ def test_analyze_capture_groups():
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.OR),
         Token(TokenType.LITERAL, "b"),
-        Token(TokenType.EOF),
     ]
 
     result = ast.analyze_capture_groups(tokens)
@@ -600,7 +601,6 @@ def test_analyze_backreferences():
 
     tokens = [
         Token(TokenType.BACKREF, 1),
-        Token(TokenType.EOF),
     ]
 
     result = ast.analyze_backreferences(tokens)
@@ -611,7 +611,6 @@ def test_analyze_backreferences():
         Token(TokenType.LITERAL, "a"),
         Token(TokenType.OR),
         Token(TokenType.LITERAL, "b"),
-        Token(TokenType.EOF),
     ]
 
     result = ast.analyze_backreferences(tokens)

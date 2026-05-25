@@ -14,7 +14,6 @@ class TokenType(StrEnum):
     RPAREN = "RPAREN"
     GROUP_START = "GROUP_START"
     BACKREF = "BACKREF"
-    EOF = "EOF"
 
     @property #убрать скобки
     def is_atom_end(self) -> bool:
@@ -68,6 +67,9 @@ class Tokenizer:
         return int(self.text[start:self.pos])
 
     def tokenize(self) -> list[Token]:
+        if self.text is None:
+            raise ValueError("Вместо текста передан None")
+
         tokens: list[Token] = []
 
         while self.pos < len(self.text):
@@ -160,5 +162,4 @@ class Tokenizer:
             tokens.append(Token(TokenType.LITERAL, c))
             self.advance()
 
-        tokens.append(Token(TokenType.EOF))
         return tokens

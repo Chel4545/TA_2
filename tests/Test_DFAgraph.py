@@ -1,5 +1,10 @@
-from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef
+import pytest
+
+from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef, AST
 from pythonProject1.logic.NFAclass import NFA
+from pythonProject1.logic.Tokenizer import Tokenizer
+from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
+from pythonProject1.PatternClass import Pattern
 
 from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
 
@@ -46,17 +51,13 @@ def test_add_edge():
     assert dfa.states[state_2].edges == []
 
 def test_get_alphabet():
+    tokenizer = Tokenizer("a|b")
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     nfa = NFA()
-
-    state_0 = nfa.new_state()
-    state_1 = nfa.new_state()
-    state_2 = nfa.new_state()
-    state_3 = nfa.new_state()
-
-    nfa.add_edge(state_0, state_1, "a")
-    nfa.add_edge(state_1, state_2, None)  # не должен попасть в алфавит
-    nfa.add_edge(state_2, state_3, "b")
-    nfa.add_edge(state_3, state_0, "a")   # повтор не должен дублироваться
+    nfa.build_nfa(ast_root)
 
     dfa = DFA()
 
@@ -65,143 +66,244 @@ def test_get_alphabet():
     assert result == {"a", "b"}
 
 def test_epsilon_closure():
+    tokenizer = Tokenizer("^a")
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     nfa = NFA()
-
-    state_0 = nfa.new_state()
-    state_1 = nfa.new_state()
-    state_2 = nfa.new_state()
-    state_3 = nfa.new_state()
-    state_4 = nfa.new_state()
-    state_5 = nfa.new_state()
-
-    nfa.add_edge(state_0, state_1, None)
-    nfa.add_edge(state_1, state_2, None)
-    nfa.add_edge(state_0, state_3, None)
-
-    #цикл
-    nfa.add_edge(state_2, state_0, None)
-
-    nfa.add_edge(state_2, state_4, "a")
-    nfa.add_edge(state_3, state_5, "b")
+    nfa.build_nfa(ast_root)
 
     dfa = DFA()
 
-    result = dfa.epsilon_closure(nfa, {state_0})
+    result = dfa.epsilon_closure(nfa, {nfa.start})
 
     assert result == frozenset({
-        state_0,
-        state_1,
-        state_2,
-        state_3,
+        0,
+        1,
+        2,
     })
 
 def test_is_accepting_subset():
+    tokenizer = Tokenizer("a|b")
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     nfa = NFA()
-
-    state_0 = nfa.new_state()
-    state_1 = nfa.new_state()
-    state_2 = nfa.new_state()
-
-    nfa.mark_accepting(state_2)
+    nfa.build_nfa(ast_root)
 
     dfa = DFA()
 
-    #есть принимающие в наборе
     result = dfa.is_accepting_subset(
         nfa,
-        frozenset({state_0, state_2}),
+        frozenset({nfa.start, nfa.accept}),
     )
 
     assert result is True
 
-    #нет принимающего в наборе
     result = dfa.is_accepting_subset(
         nfa,
-        frozenset({state_0, state_1}),
+        frozenset({nfa.start}),
     )
 
     assert result is False
 
+
 def test_move():
+    tokenizer = Tokenizer("a|b")
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
     nfa = NFA()
-
-    state_0 = nfa.new_state()
-    state_1 = nfa.new_state()
-    state_2 = nfa.new_state()
-    state_3 = nfa.new_state()
-    state_4 = nfa.new_state()
-
-
-    nfa.add_edge(state_0, state_1, "a")
-    nfa.add_edge(state_2, state_3, "a")
-
-    nfa.add_edge(state_0, state_4, "b")
-
-    nfa.add_edge(state_1, state_4, None)
+    nfa.build_nfa(ast_root)
 
     dfa = DFA()
 
+    start_closure = dfa.epsilon_closure(nfa, {nfa.start})
+
     result = dfa.move(
         nfa=nfa,
-        state_ids={state_0, state_2},
+        state_ids=start_closure,
         symbol="a",
     )
 
-    assert result == {state_1, state_3}
+    assert result == {1}
 
     result = dfa.move(
         nfa=nfa,
-        state_ids={state_0, state_2},
+        state_ids=start_closure,
         symbol="b",
     )
 
-    assert result == {state_4}
+    assert result == {3}
 
     result = dfa.move(
         nfa=nfa,
-        state_ids={state_0, state_2},
+        state_ids=start_closure,
         symbol="c",
     )
 
     assert result == set()
 
-def test_build_dfa_for_a_or_b():
-    nfa = NFA()
+CASES_BUILD_DFA = {
+    "a -> DFA for literal a": (
+        "a",
+        {"a"},
+        2,
+        {
+            0: False,
+            1: True,
+        },
+        {
+            0: [DFAEdge(to_state=1, symbol="a")],
+            1: [],
+        },
+        "build_dfa_literal_a",
+    ),
 
-    nfa.build_nfa(
-        Or(
-            left=Literal("a"),
-            right=Literal("b"),
-        )
-    )
+    "^ -> DFA for epsilon": (
+        "^",
+        set(),
+        1,
+        {
+            0: True,
+        },
+        {
+            0: [],
+        },
+        "build_dfa_epsilon",
+    ),
+
+    "ab -> DFA for concat": (
+        "ab",
+        {"a", "b"},
+        3,
+        {
+            0: False,
+            1: False,
+            2: True,
+        },
+        {
+            0: [DFAEdge(to_state=1, symbol="a")],
+            1: [DFAEdge(to_state=2, symbol="b")],
+            2: [],
+        },
+        "build_dfa_concat_ab",
+    ),
+
+    "a|b -> DFA for union": (
+        "a|b",
+        {"a", "b"},
+        3,
+        {
+            0: False,
+            1: True,
+            2: True,
+        },
+        {
+            0: [
+                DFAEdge(to_state=1, symbol="a"),
+                DFAEdge(to_state=2, symbol="b"),
+            ],
+            1: [],
+            2: [],
+        },
+        "build_dfa_union_a_or_b",
+    ),
+
+    "a+ -> DFA for plus": (
+        "a+",
+        {"a"},
+        2,
+        {
+            0: False,
+            1: True,
+        },
+        {
+            0: [DFAEdge(to_state=1, symbol="a")],
+            1: [DFAEdge(to_state=1, symbol="a")],
+        },
+        "build_dfa_plus_a",
+    ),
+
+    "a{1,2} -> DFA for repeat": (
+        "a{1,2}",
+        {"a"},
+        3,
+        {
+            0: False,
+            1: True,
+            2: True,
+        },
+        {
+            0: [DFAEdge(to_state=1, symbol="a")],
+            1: [DFAEdge(to_state=2, symbol="a")],
+            2: [],
+        },
+        "build_dfa_repeat_a_1_2",
+    ),
+
+    "(1:a) -> DFA for capture group": (
+        "(1:a)",
+        {"a"},
+        2,
+        {
+            0: False,
+            1: True,
+        },
+        {
+            0: [DFAEdge(to_state=1, symbol="a")],
+            1: [],
+        },
+        "build_dfa_group_1_a",
+    ),
+}
+
+
+@pytest.mark.parametrize("case_name", CASES_BUILD_DFA.keys())
+def test_build_dfa(case_name):
+    (
+        regex,
+        expected_alphabet,
+        expected_state_count,
+        expected_accepting,
+        expected_edges,
+        filename,
+    ) = CASES_BUILD_DFA[case_name]
+
+    tokenizer = Tokenizer(regex)
+
+    ast = AST()
+    ast_root = ast.parse(tokenizer.tokens)
+
+    nfa = NFA()
+    nfa.build_nfa(ast_root)
 
     dfa = DFA()
-
     result = dfa.build_dfa(nfa)
+
+    visualizer = GraphvizVisualizer()
+
+    dfa_graph = visualizer.dfa_to_graph(dfa)
+    visualizer.render(
+        dfa_graph,
+        filename,
+        subdir="tests/dfa",
+    )
 
     assert result is dfa
 
-    assert dfa.alphabet == {"a", "b"}
+    assert dfa.alphabet == expected_alphabet
     assert dfa.start == 0
+    assert len(dfa.states) == expected_state_count
 
-    assert len(dfa.states) == 3
+    for state_id, is_accepting in expected_accepting.items():
+        assert dfa.states[state_id].is_accepting is is_accepting
 
-    # стартовое
-    assert dfa.states[0].is_accepting is False
-
-    # Из стартового состояния:
-    # в принимающее состояние 1
-    # в принимающее состояние 2
-    assert dfa.states[0].edges == [
-        DFAEdge(to_state=1, symbol="a"),
-        DFAEdge(to_state=2, symbol="b"),
-    ]
-
-    assert dfa.states[1].is_accepting is True
-    assert dfa.states[1].edges == []
-
-    assert dfa.states[2].is_accepting is True
-    assert dfa.states[2].edges == []
+    for state_id, edges in expected_edges.items():
+        assert dfa.states[state_id].edges == edges
 
 def test_transition():
     dfa = DFA()
@@ -227,19 +329,134 @@ def test_transition():
         DFAEdge(to_state=state_2, symbol="b"),
     ]
 
-def test_search_for_a_plus():
-    nfa = NFA()
-    nfa.build_nfa(
-        Plus(
-            expr=Literal("a"),
-        )
-    )
+CASES_ACCEPTS = {
+    "literal a": (
+        "a",
+        ["a"],
+        ["", "b", "aa", "ba"],
+    ),
 
-    dfa = DFA()
-    dfa.build_dfa(nfa)
+    "concat ab": (
+        "ab",
+        ["ab"],
+        ["", "a", "b", "abc", "xаб"],
+    ),
 
-    result = dfa.search("xxaaab")
-    assert result == (2, 5, "aaa")
+    "plus a": (
+        "a+",
+        ["a", "aa", "aaa"],
+        ["", "b", "ab", "ba"],
+    ),
 
-    result = dfa.search("bbb")
-    assert result is None
+    "union a_or_b": (
+        "a|b",
+        ["a", "b"],
+        ["", "ab", "aa", "bb", "c"],
+    ),
+
+    "bounded repeat": (
+        "a{2,4}",
+        ["aa", "aaa", "aaaa"],
+        ["", "a", "aaaaa", "b"],
+    ),
+
+    "epsilon": (
+        "^",
+        [""],
+        ["a", "aa", "b"],
+    ),
+
+    "epsilon_or_a": (
+        "^|a",
+        ["", "a"],
+        ["aa", "b", "ab"],
+    ),
+}
+
+
+@pytest.mark.parametrize("case_name", CASES_ACCEPTS.keys())
+def test_accepts(case_name):
+    regex, accepted_data, rejected_data = CASES_ACCEPTS[case_name]
+
+    pattern = Pattern.compile(regex)
+    dfa = pattern.min_dfa or pattern.dfa
+
+    for data in accepted_data:
+        assert dfa.accepts(data) is True
+
+    for data in rejected_data:
+        assert dfa.accepts(data) is False
+
+CASES_SEARCH = {
+    "find literal a": (
+        "a",
+        "xxay",
+        (2, 3, "a"),
+    ),
+
+    "find concat ab": (
+        "ab",
+        "xxabyy",
+        (2, 4, "ab"),
+    ),
+
+    "find a_plus longest from first start": (
+        "a+",
+        "xxaaab",
+        (2, 5, "aaa"),
+    ),
+
+    "find union": (
+        "a|b",
+        "xxb",
+        (2, 3, "b"),
+    ),
+
+    "find bounded repeat longest": (
+        "a{2,4}",
+        "xaaaay",
+        (1, 5, "aaaa"),
+    ),
+
+    "epsilon matches at zero position": (
+        "^",
+        "abc",
+        (0, 0, ""),
+    ),
+
+    "epsilon_or_a returns empty first": (
+        "^|a",
+        "abc",
+        (0, 1, "a"),
+    ),
+
+    "no match": (
+        "ab",
+        "acb",
+        None,
+    ),
+
+    "first occurrence before later longer one": (
+        "a+",
+        "baaa",
+        (1, 4, "aaa"),
+    ),
+
+    "leftmost start wins": (
+        "ab|abc",
+        "xxabc",
+        (2, 5, "abc"),
+    ),
+}
+
+
+@pytest.mark.parametrize("case_name", CASES_SEARCH.keys())
+def test_search(case_name):
+    regex, data, expected_result = CASES_SEARCH[case_name]
+
+    pattern = Pattern.compile(regex)
+    dfa = pattern.min_dfa or pattern.dfa
+
+    result = dfa.search(data)
+
+    assert result == expected_result
