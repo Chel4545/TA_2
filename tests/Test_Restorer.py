@@ -1,7 +1,6 @@
 import pytest
 
 from pythonProject1.PatternClass import Pattern
-from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
 from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
 from pythonProject1.logic.RegexRestorer import GNFA
 
@@ -161,22 +160,13 @@ CASES_RESTORE_REGEX = {
 def test_restore_regex_equivalence(case_name):
     regex, accepted_data, rejected_data, filename = CASES_RESTORE_REGEX[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     try:
         original_pattern = Pattern.compile(regex)
     except ValueError:
         assert regex is None
         return
 
-    original_dfa = original_pattern.min_dfa or original_pattern.dfa
-
-    original_graph = visualizer.dfa_to_graph(original_dfa)
-    visualizer.render(
-        original_graph,
-        filename + "_original",
-        subdir="tests/restore",
-    )
+    original_dfa = original_pattern.min_dfa
 
     gnfa = GNFA()
     restored_regex = gnfa.build_regex(original_dfa)
@@ -184,14 +174,7 @@ def test_restore_regex_equivalence(case_name):
     assert restored_regex is not None
 
     restored_pattern = Pattern.compile(restored_regex)
-    restored_dfa = restored_pattern.min_dfa or restored_pattern.dfa
-
-    restored_graph = visualizer.dfa_to_graph(restored_dfa)
-    visualizer.render(
-        restored_graph,
-        filename + "_restored",
-        subdir="tests/restore",
-    )
+    restored_dfa = restored_pattern.min_dfa
 
     assert original_dfa.is_equivalent(restored_dfa) is True
     assert restored_dfa.is_equivalent(original_dfa) is True

@@ -2,8 +2,6 @@ import pytest
 
 from pythonProject1.logic.DFAclass import DFA, DFAEdge
 from pythonProject1.PatternClass import Pattern
-from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
-
 
 CASES_IS_EQUIVALENT = {
     "a == a": (
@@ -110,7 +108,6 @@ CASES_IS_EQUIVALENT = {
 def test_is_equivalent(case_name):
     regex_a, regex_b, expected_result, filename = CASES_IS_EQUIVALENT[case_name]
 
-    visualizer = GraphvizVisualizer()
 
     pattern_a = Pattern.compile(regex_a)
     pattern_b = Pattern.compile(regex_b)
@@ -120,34 +117,6 @@ def test_is_equivalent(case_name):
 
     min_dfa_a = pattern_a.min_dfa
     min_dfa_b = pattern_b.min_dfa
-
-    dfa_a_graph = visualizer.dfa_to_graph(dfa_a)
-    visualizer.render(
-        dfa_a_graph,
-        filename + "dfa_a",
-        subdir="tests/operations",
-    )
-
-    dfa_b_graph = visualizer.dfa_to_graph(dfa_b)
-    visualizer.render(
-        dfa_b_graph,
-        filename + "dfa_b",
-        subdir="tests/operations",
-    )
-
-    min_dfa_a_graph = visualizer.dfa_to_graph(min_dfa_a)
-    visualizer.render(
-        min_dfa_a_graph,
-        filename + "min_dfa_a",
-        subdir="tests/operations",
-    )
-
-    min_dfa_b_graph = visualizer.dfa_to_graph(min_dfa_b)
-    visualizer.render(
-        min_dfa_b_graph,
-        filename + "min_dfa_b",
-        subdir="tests/operations",
-    )
 
     assert dfa_a.is_equivalent(dfa_b) is expected_result
     assert dfa_b.is_equivalent(dfa_a) is expected_result
@@ -252,8 +221,6 @@ def test_is_isomorphic(case_name):
         filename,
     ) = CASES_IS_ISOMORPHIC[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern_a = Pattern.compile(regex_a)
     pattern_b = Pattern.compile(regex_b)
 
@@ -262,34 +229,6 @@ def test_is_isomorphic(case_name):
 
     min_dfa_a = pattern_a.min_dfa
     min_dfa_b = pattern_b.min_dfa
-
-    dfa_a_graph = visualizer.dfa_to_graph(dfa_a)
-    visualizer.render(
-        dfa_a_graph,
-        filename + "dfa_a",
-        subdir="tests/operations",
-    )
-
-    dfa_b_graph = visualizer.dfa_to_graph(dfa_b)
-    visualizer.render(
-        dfa_b_graph,
-        filename + "dfa_b",
-        subdir="tests/operations",
-    )
-
-    min_dfa_a_graph = visualizer.dfa_to_graph(min_dfa_a)
-    visualizer.render(
-        min_dfa_a_graph,
-        filename + "min_dfa_a",
-        subdir="tests/operations",
-    )
-
-    min_dfa_b_graph = visualizer.dfa_to_graph(min_dfa_b)
-    visualizer.render(
-        min_dfa_b_graph,
-        filename + "min_dfa_b",
-        subdir="tests/operations",
-    )
 
     assert dfa_a.is_isomorphic(dfa_b) is expected_dfa_isomorphic
     assert dfa_b.is_isomorphic(dfa_a) is expected_dfa_isomorphic
@@ -352,28 +291,12 @@ CASES_MAKE_COMPLETE = {
 def test_make_complete(case_name):
     regex, alphabet, accepted_data, rejected_data, filename = CASES_MAKE_COMPLETE[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern = Pattern.compile(regex)
 
     dfa = pattern.min_dfa or pattern.dfa
     original = dfa.clone()
 
-    original_graph = visualizer.dfa_to_graph(original)
-    visualizer.render(
-        original_graph,
-        filename + "before",
-        subdir="tests/operations",
-    )
-
     dfa.make_complete(alphabet)
-
-    completed_graph = visualizer.dfa_to_graph(dfa)
-    visualizer.render(
-        completed_graph,
-        filename + "after",
-        subdir="tests/operations",
-    )
 
     assert dfa.alphabet == alphabet
 
@@ -449,26 +372,10 @@ CASES_CLONE = {
 def test_clone(case_name):
     regex, accepted_data, rejected_data, filename = CASES_CLONE[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern = Pattern.compile(regex)
 
     dfa = pattern.dfa
     cloned = dfa.clone()
-
-    original_graph = visualizer.dfa_to_graph(dfa)
-    visualizer.render(
-        original_graph,
-        filename + "_original",
-        subdir="tests/operations",
-    )
-
-    cloned_graph = visualizer.dfa_to_graph(cloned)
-    visualizer.render(
-        cloned_graph,
-        filename + "_cloned",
-        subdir="tests/operations",
-    )
 
     assert cloned is not dfa
 
@@ -566,28 +473,12 @@ CASES_NEGATE = {
 def test_negate(case_name):
     regex, alphabet, accepted_by_negated, rejected_by_negated, filename = CASES_NEGATE[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern = Pattern.compile(regex)
 
     dfa = pattern.min_dfa or pattern.dfa
     original = dfa.clone()
 
-    original_graph = visualizer.dfa_to_graph(original)
-    visualizer.render(
-        original_graph,
-        filename + "_original",
-        subdir="tests/operations",
-    )
-
     negated = dfa.negate(alphabet)
-
-    negated_graph = visualizer.dfa_to_graph(negated)
-    visualizer.render(
-        negated_graph,
-        filename + "_negated",
-        subdir="tests/operations",
-    )
 
     assert negated is not dfa
     assert negated.alphabet == alphabet
@@ -607,13 +498,6 @@ def test_negate(case_name):
         assert original.accepts(data) is True
 
     double_negated = negated.negate(alphabet)
-
-    double_negated_graph = visualizer.dfa_to_graph(double_negated)
-    visualizer.render(
-        double_negated_graph,
-        filename + "_double_negated",
-        subdir="tests/operations",
-    )
 
     # двойное отрицание
     assert double_negated.is_equivalent(original) is True
@@ -687,8 +571,6 @@ def test_union(case_name):
         filename,
     ) = CASES_UNION[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern_a = Pattern.compile(regex_a)
     pattern_b = Pattern.compile(regex_b)
     expected_pattern = Pattern.compile(expected_regex)
@@ -697,42 +579,14 @@ def test_union(case_name):
     dfa_b = pattern_b.min_dfa or pattern_b.dfa
     expected_dfa = expected_pattern.min_dfa or expected_pattern.dfa
 
-    dfa_a_graph = visualizer.dfa_to_graph(dfa_a)
-    visualizer.render(
-        dfa_a_graph,
-        filename + "_dfa_a",
-        subdir="tests/operations",
-    )
-
-    dfa_b_graph = visualizer.dfa_to_graph(dfa_b)
-    visualizer.render(
-        dfa_b_graph,
-        filename + "_dfa_b",
-        subdir="tests/operations",
-    )
-
     result = dfa_a.union(dfa_b)
 
     result_min = result.build_min_dfa()
-
-    result_min_graph = visualizer.dfa_to_graph(result_min)
-    visualizer.render(
-        result_min_graph,
-        filename + "_result_min",
-        subdir="tests/operations",
-    )
 
     expected_complete = expected_dfa.clone()
     expected_complete.make_complete(result.alphabet)
 
     expected_min = expected_complete.build_min_dfa()
-
-    expected_graph = visualizer.dfa_to_graph(expected_min)
-    visualizer.render(
-        expected_graph,
-        filename + "_expected_min",
-        subdir="tests/operations",
-    )
 
     assert result.alphabet == set(dfa_a.alphabet) | set(dfa_b.alphabet)
     assert result_min.alphabet == expected_min.alphabet
@@ -828,7 +682,6 @@ def test_intersection(case_name):
         filename,
     ) = CASES_INTERSECTION[case_name]
 
-    visualizer = GraphvizVisualizer()
 
     pattern_a = Pattern.compile(regex_a)
     pattern_b = Pattern.compile(regex_b)
@@ -838,42 +691,15 @@ def test_intersection(case_name):
     dfa_b = pattern_b.min_dfa or pattern_b.dfa
     expected_dfa = expected_pattern.min_dfa or expected_pattern.dfa
 
-    dfa_a_graph = visualizer.dfa_to_graph(dfa_a)
-    visualizer.render(
-        dfa_a_graph,
-        filename + "_dfa_a",
-        subdir="tests/operations",
-    )
-
-    dfa_b_graph = visualizer.dfa_to_graph(dfa_b)
-    visualizer.render(
-        dfa_b_graph,
-        filename + "_dfa_b",
-        subdir="tests/operations",
-    )
-
     result = dfa_a.intersection(dfa_b)
 
     result_min = result.build_min_dfa()
-
-    result_min_graph = visualizer.dfa_to_graph(result_min)
-    visualizer.render(
-        result_min_graph,
-        filename + "_result_min",
-        subdir="tests/operations",
-    )
 
     expected_complete = expected_dfa.clone()
     expected_complete.make_complete(result.alphabet)
 
     expected_min = expected_complete.build_min_dfa()
 
-    expected_graph = visualizer.dfa_to_graph(expected_min)
-    visualizer.render(
-        expected_graph,
-        filename + "_expected_min",
-        subdir="tests/operations",
-    )
 
     assert result.alphabet == set(dfa_a.alphabet) | set(dfa_b.alphabet)
     assert result_min.alphabet == expected_min.alphabet
@@ -964,6 +790,15 @@ CASES_DIFF = {
         ["", "aa", "b"],
         "diff_a_plus_a_plus_empty",
     ),
+
+    "a|b minus a|b = empty": (
+        "a|b",
+        "a|b",
+        None,
+        [],
+        ["", "aa", "b"],
+        "diff_a_or_b_a_or_b_empty",
+    ),
 }
 
 
@@ -978,38 +813,15 @@ def test_diff(case_name):
         filename,
     ) = CASES_DIFF[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     pattern_a = Pattern.compile(regex_a)
     pattern_b = Pattern.compile(regex_b)
 
     dfa_a = pattern_a.min_dfa or pattern_a.dfa
     dfa_b = pattern_b.min_dfa or pattern_b.dfa
 
-    dfa_a_graph = visualizer.dfa_to_graph(dfa_a)
-    visualizer.render(
-        dfa_a_graph,
-        filename + "_dfa_a",
-        subdir="tests/operations",
-    )
-
-    dfa_b_graph = visualizer.dfa_to_graph(dfa_b)
-    visualizer.render(
-        dfa_b_graph,
-        filename + "_dfa_b",
-        subdir="tests/operations",
-    )
-
     result = dfa_a.diff(dfa_b)
 
     result_min = result.build_min_dfa()
-
-    result_min_graph = visualizer.dfa_to_graph(result_min)
-    visualizer.render(
-        result_min_graph,
-        filename + "_result_min",
-        subdir="tests/operations",
-    )
 
     assert result.alphabet == set(dfa_a.alphabet) | set(dfa_b.alphabet)
 
@@ -1031,13 +843,6 @@ def test_diff(case_name):
     expected_complete.make_complete(result.alphabet)
 
     expected_min = expected_complete.build_min_dfa()
-
-    expected_graph = visualizer.dfa_to_graph(expected_min)
-    visualizer.render(
-        expected_graph,
-        filename + "_expected_min",
-        subdir="tests/operations",
-    )
 
     assert result_min.alphabet == expected_min.alphabet
 

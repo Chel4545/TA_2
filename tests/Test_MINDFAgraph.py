@@ -5,7 +5,6 @@ from pythonProject1.logic.NFAclass import NFA
 
 from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
 from pythonProject1.logic.Tokenizer import Tokenizer
-from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
 
 def test_get_states_by_accepting():
     dfa = DFA()
@@ -229,8 +228,6 @@ def test_build_min_dfa(case_name):
         filename,
     ) = CASES_BUILD_MIN_DFA[case_name]
 
-    visualizer = GraphvizVisualizer()
-
     tokenizer = Tokenizer(regex)
 
     ast = AST()
@@ -242,21 +239,7 @@ def test_build_min_dfa(case_name):
     dfa = DFA()
     dfa.build_dfa(nfa)
 
-    dfa_graph = visualizer.dfa_to_graph(dfa)
-    visualizer.render(
-        dfa_graph,
-        filename + "_dfa",
-        subdir="tests/min_dfa",
-    )
-
     min_dfa = dfa.build_min_dfa()
-
-    min_dfa_graph = visualizer.dfa_to_graph(min_dfa)
-    visualizer.render(
-        min_dfa_graph,
-        filename + "_min_dfa",
-        subdir="tests/min_dfa",
-    )
 
     assert dfa.alphabet == expected_alphabet
     assert min_dfa.alphabet == expected_alphabet

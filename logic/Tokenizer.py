@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from pygments.lexers.robotframework import Variable
+
 
 class TokenType(StrEnum):
     LITERAL = "LITERAL"

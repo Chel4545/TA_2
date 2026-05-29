@@ -334,7 +334,7 @@ class DFA:
                 if next_pair not in pair_to_id:
                     next_accepting = (
                             dfa1.states[next_q1].is_accepting
-                            or # and
+                            or
                             dfa2.states[next_q2].is_accepting
                     )
 

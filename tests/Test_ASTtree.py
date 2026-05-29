@@ -221,7 +221,6 @@ def test_insert_concat_tokens(input_tokens, expected_tokens):
 
 def test_apply_op_or_and_concat():
     ast = AST()
-    visualizer = GraphvizVisualizer()
 
     # OR
     nodes = [
@@ -230,13 +229,6 @@ def test_apply_op_or_and_concat():
     ]
 
     ast.apply_op(Token(TokenType.OR), nodes)
-
-    ast_graph = visualizer.ast_to_graph(nodes[0])
-    visualizer.render(
-        ast_graph,
-        "apply_op_or",
-        subdir="tests/ast",
-    )
 
 
     assert nodes == [
@@ -261,13 +253,6 @@ def test_apply_op_or_and_concat():
 
     ast.apply_op(Token(TokenType.CONCAT), nodes)
 
-    ast_graph = visualizer.ast_to_graph(nodes[0])
-    visualizer.render(
-        ast_graph,
-        "apply_op_concat",
-        subdir="tests/ast",
-    )
-
     assert nodes == [
         Concat(
             left=Literal("a"),
@@ -288,7 +273,6 @@ def test_apply_op_or_and_concat():
 
 def test_apply_postfix_plus_and_range():
     ast = AST()
-    visualizer = GraphvizVisualizer()
 
     # PLUS
     nodes = [
@@ -296,13 +280,6 @@ def test_apply_postfix_plus_and_range():
     ]
 
     ast.apply_postfix(Token(TokenType.PLUS), nodes)
-
-    ast_graph = visualizer.ast_to_graph(nodes[0])
-    visualizer.render(
-        ast_graph,
-        "apply_postfix_plus",
-        subdir="tests/ast",
-    )
 
     assert nodes == [
         Plus(
@@ -321,13 +298,6 @@ def test_apply_postfix_plus_and_range():
 
     ast.apply_postfix(Token(TokenType.RANGE, (2, 3)), nodes)
 
-    ast_graph = visualizer.ast_to_graph(nodes[0])
-    visualizer.render(
-        ast_graph,
-        "apply_postfix_range_2_3",
-        subdir="tests/ast",
-    )
-
     assert nodes == [
         Repeat(
             expr=Literal("a"),
@@ -342,13 +312,6 @@ def test_apply_postfix_plus_and_range():
     ]
 
     ast.apply_postfix(Token(TokenType.RANGE, (2, None)), nodes)
-
-    ast_graph = visualizer.ast_to_graph(nodes[0])
-    visualizer.render(
-        ast_graph,
-        "apply_postfix_range_2_none",
-        subdir="tests/ast",
-    )
 
     assert nodes == [
         Repeat(
@@ -554,7 +517,6 @@ CASES = {
 @pytest.mark.parametrize("case_name", CASES.keys())
 def test_parse(case_name):
     ast = AST()
-    visualizer = GraphvizVisualizer()
 
     tokens, expected_ast, expected_error = CASES[case_name]
 
@@ -563,13 +525,6 @@ def test_parse(case_name):
             ast.parse(tokens)
     else:
         result = ast.parse(tokens)
-
-        ast_graph = visualizer.ast_to_graph(result)
-        visualizer.render(
-            ast_graph,
-            case_name,
-            subdir="tests/ast",
-        )
 
         assert result == expected_ast
 

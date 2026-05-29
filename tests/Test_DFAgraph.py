@@ -3,7 +3,6 @@ import pytest
 from pythonProject1.logic.ASTclass import Literal, Epsilon, Concat, Or, Plus, Repeat, Group, BackRef, AST
 from pythonProject1.logic.NFAclass import NFA
 from pythonProject1.logic.Tokenizer import Tokenizer
-from pythonProject1.visualization.GraphvizVisualizer import GraphvizVisualizer
 from pythonProject1.PatternClass import Pattern
 
 from pythonProject1.logic.DFAclass import DFA, DFAState, DFAEdge
@@ -284,14 +283,6 @@ def test_build_dfa(case_name):
     dfa = DFA()
     result = dfa.build_dfa(nfa)
 
-    visualizer = GraphvizVisualizer()
-
-    dfa_graph = visualizer.dfa_to_graph(dfa)
-    visualizer.render(
-        dfa_graph,
-        filename,
-        subdir="tests/dfa",
-    )
 
     assert result is dfa
 
